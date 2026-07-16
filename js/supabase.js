@@ -81,6 +81,17 @@ async function logout() {
   if (error) throw error;
 }
 
+async function signInWithGoogle() {
+  const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin || 'https://happy-learner.vercel.app'
+    }
+  });
+  if (error) throw error;
+  return data;
+}
+
 async function getProfile() {
   if (!currentUser) return null;
   const { data, error } = await supabaseClient
