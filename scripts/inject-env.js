@@ -10,10 +10,10 @@ const fs = require('fs');
 const path = require('path');
 
 const secretsPath = path.join(__dirname, '..', 'js', 'secrets.js');
-const apiKey = process.env.OPENAI_API_KEY || '';
+const apiKey = process.env.OPENROUTER_API_KEY || '';
 
 if (!apiKey) {
-  console.warn('⚠️  OPENAI_API_KEY env var not set — AI features will be disabled.');
+  console.warn('⚠️  OPENROUTER_API_KEY env var not set — AI features will be disabled.');
 }
 
 const content = [
