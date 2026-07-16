@@ -263,7 +263,6 @@ async function openFlashcards() {
           <option value="well-tested">${t('english.wellTested')}</option>
           <option value="mastered">${t('english.mastered')}</option>
         </select>
-        <button class="btn btn-outline btn-sm" onclick="generateAllSentences()" style="margin-left:0.5rem">✨ Generate All Sentences</button>
       </div>
     </div>
     <div id="flashcardContainer"></div>
