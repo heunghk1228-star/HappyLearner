@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learning Toolkit</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.0.0/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/secrets.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/vocabulary.js"></script>
+  <script src="js/flashcards.js"></script>
+  <script src="js/revision.js"></script>
+  <script src="js/app.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">📚 Learning Toolkit</div>
+      
+      <nav class="nav">
+        <a href="#" class="nav-link active" data-page="about" data-i18n="nav.about">關於我們</a>
+        <a href="#" class="nav-link" data-page="chinese" data-i18n="nav.chinese">中文</a>
+        <a href="#" class="nav-link" data-page="english" data-i18n="nav.english">英文</a>
+        <a href="#" class="nav-link" data-page="math" data-i18n="nav.math">數學</a>
+        <a href="#" class="nav-link" data-page="science" data-i18n="nav.science">科學</a>
+        <a href="#" class="nav-link" data-page="humanities" data-i18n="nav.humanities">人文</a>
+      </nav>
+      
+      <div class="header-right">
+        <div class="lang-selector">
+          <button class="lang-btn" data-lang="zh-TW">繁</button>
+          <button class="lang-btn" data-lang="zh-CN">简</button>
+          <button class="lang-btn" data-lang="en">EN</button>
+        </div>
+        
+        <div class="user-area">
+          <span class="gem-display" id="gemDisplay">💎 <span id="gemCount">0</span></span>
+          <button class="btn-login" id="loginBtn" data-i18n="english.login">登入</button>
+          <div class="user-info hidden" id="userInfo">
+            <span class="user-name" id="userName"></span>
+            <button class="btn-logout" id="logoutBtn" data-i18n="english.logout">登出</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+  
+  <!-- Main Content -->
+  <main class="main">
+    <div id="pageContent"></div>
+  </main>
+  
+  <!-- Auth Modal -->
+  <div id="authModal" class="hidden"></div>
+  
+  <!-- Footer -->
+  <footer style="text-align:center;padding:2rem;color:var(--text-light);font-size:0.85rem;border-top:1px solid var(--border);margin-top:3rem;">
+    <p>© 2025 Learning Toolkit — Built with ❤️ for my daughter</p>
+  </footer>
+</body>
+</html>
