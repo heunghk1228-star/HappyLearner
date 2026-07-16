@@ -431,37 +431,68 @@ async function processWordInput() {
   const text = textarea.value.trim();
   if (!text) return;
   
-  // Extract words (remove punctuation, split by whitespace)
-  const rawWords = text.toLowerCase()
+  // Extract words preserving case (to detect names later)
+  const rawWords = text
     .replace(/[^\w\s'-]/g, ' ')
     .split(/\s+/)
-    .filter(w => w.length > 1 && /^[a-z]/.test(w)); // Skip single letters and non-alpha
+    .filter(w => w.length > 1 && /^[a-zA-Z]/.test(w));
   
-  // Remove duplicates and normalize
+  // Detect names: skip capitalized words that aren't at the start of sentences
+  const sentences = text.split(/[.!?]\s*/);
+  const firstWords = new Set(sentences.map(s => s.trim().split(/\s+/)[0]?.toLowerCase()).filter(Boolean));
+  const filtered = rawWords.filter(w => {
+    const lower = w.toLowerCase();
+    // Skip if it's capitalized AND not at sentence start AND not a common word
+    if (w[0] === w[0].toUpperCase() && w[0] !== w[0].toLowerCase() && !firstWords.has(lower)) {
+      // Check if it's a common word that should be capitalized (like "I")
+      if (lower !== 'i') return false;
+    }
+    return true;
+  });
+  
+  // Remove duplicates preserving first occurrence
   const seen = new Set();
-  const uniqueWords = [];
-  for (const w of rawWords) {
-    const normalized = normalizeWord(w);
-    if (!seen.has(normalized) && normalized.length > 1) {
-      seen.add(normalized);
-      const pos = detectPOS(normalized);
-      uniqueWords.push({ word: normalized, pos });
+  const unique = [];
+  for (const w of filtered) {
+    const lower = w.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      unique.push(lower);
     }
   }
   
   // Limit to 100
-  const toAdd = uniqueWords.slice(0, 100);
+  const toNormalize = unique.slice(0, 100);
   
-  if (!toAdd.length) {
-    document.getElementById('addResult').innerHTML = `
-      <div class="result-info">${t('common.placeholders')}</div>
-    `;
+  if (!toNormalize.length) {
+    document.getElementById('addResult').innerHTML = `<div class="result-info">${t('common.placeholders')}</div>`;
     return;
   }
   
   showLoading();
+  
   try {
-    const result = await bulkAddWords(toAdd);
+    // Step 1: AI normalize words (present tense / singular form)
+    const normalized = await callAIBatchNormalize(toNormalize);
+    
+    // Step 2: Build word objects for bulkAdd
+    const wordObjects = [];
+    const seenNorm = new Set();
+    for (const w of normalized) {
+      if (!seenNorm.has(w.normalized) && w.normalized.length > 1) {
+        seenNorm.add(w.normalized);
+        wordObjects.push({ word: w.normalized, pos: w.pos || detectPOS(w.normalized) });
+      }
+    }
+    
+    if (!wordObjects.length) {
+      document.getElementById('addResult').innerHTML = `<div class="result-info">${t('common.placeholders')}</div>`;
+      hideLoading();
+      return;
+    }
+    
+    // Step 3: Add to database (includes AI translation inside bulkAddWords)
+    const result = await bulkAddWords(wordObjects);
     document.getElementById('addResult').innerHTML = `
       <div class="result-success">✅ ${t('english.wordAdded')}</div>
       <div class="result-details">
@@ -472,9 +503,7 @@ async function processWordInput() {
     textarea.value = '';
     document.getElementById('wordCount').textContent = `0 / 100 ${t('english.words')}`;
   } catch (e) {
-    document.getElementById('addResult').innerHTML = `
-      <div class="result-error">❌ ${e.message}</div>
-    `;
+    document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
   }
   hideLoading();
 }

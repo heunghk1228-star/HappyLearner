@@ -447,7 +447,7 @@ async function callAIBatchMeanings(words) {
   
   for (const batch of batches) {
     try {
-      const wordList = batch.map(w => w.word || w).join('\n');
+      const wordList = batch.map(w => w.normalized || w.word || w).join('\n');
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -490,7 +490,7 @@ async function callAIBatchMeanings(words) {
       
       // Assign meanings back to the words
       for (const w of batch) {
-        const wordKey = (w.word || w).toLowerCase();
+        const wordKey = (w.normalized || w.word || w).toLowerCase();
         if (translations[wordKey] && (!w.meaning || !w.meaning.trim())) {
           w.meaning = translations[wordKey];
         }
@@ -500,4 +500,81 @@ async function callAIBatchMeanings(words) {
       // Continue without AI meanings rather than failing entirely
     }
   }
+}
+
+// ============================================================
+// AI: Batch word normalization (base form extraction)
+// ============================================================
+
+async function callAIBatchNormalize(words) {
+  if (!words.length) return [];
+  
+  const BATCH_SIZE = 30;
+  const batches = [];
+  for (let i = 0; i < words.length; i += BATCH_SIZE) {
+    batches.push(words.slice(i, i + BATCH_SIZE));
+  }
+  
+  const allResults = [];
+  for (const batch of batches) {
+    try {
+      const wordList = batch.join('\n');
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
+          'HTTP-Referer': window.location.origin || 'https://happylearner2077.vercel.app',
+          'X-Title': 'HappyLearner'
+        },
+        body: JSON.stringify({
+          model: CONFIG.openai.model || 'deepseek/deepseek-v4-flash',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a linguist. Convert each word to its base form: verbs to present tense, nouns to singular. Skip proper nouns/names (return empty). Return ONLY a JSON object like {"ran":"run","apples":"apple","John":""}. No explanations, no markdown.'
+            },
+            {
+              role: 'user',
+              content: `Convert these words to their base forms:\n${wordList}`
+            }
+          ],
+          max_tokens: 1000,
+          temperature: 0.1
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || 'API error');
+      
+      const text = data.choices?.[0]?.message?.content?.trim() || '{}';
+      let normalizations = {};
+      try {
+        const jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        normalizations = JSON.parse(jsonStr);
+      } catch (e) {
+        console.warn('Failed to parse AI normalization:', text);
+        // Fallback: use original words
+        for (const w of batch) {
+          allResults.push({ original: w, normalized: w, pos: detectPOS(w) });
+        }
+        continue;
+      }
+      
+      for (const w of batch) {
+        const base = normalizations[w];
+        if (base && base.length > 0) {
+          allResults.push({ original: w, normalized: base, pos: detectPOS(base) });
+        }
+        // If AI returned empty string (name/proper noun), skip it
+      }
+    } catch (e) {
+      console.warn('AI normalization failed:', e.message);
+      // Fallback: use original words
+      for (const w of batch) {
+        allResults.push({ original: w, normalized: w, pos: detectPOS(w) });
+      }
+    }
+  }
+  return allResults;
 }
