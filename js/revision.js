@@ -256,8 +256,8 @@ async function callAISentence(word) {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
-      'HTTP-Referer': window.location.origin || 'https://learning-toolkit.local',
-      'X-Title': 'Learning Toolkit'
+      'HTTP-Referer': window.location.origin || 'https://happylearner2077.vercel.app',
+      'X-Title': 'HappyLearner'
     },
     body: JSON.stringify({
       model: CONFIG.openai.model,

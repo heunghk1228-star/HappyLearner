@@ -453,7 +453,7 @@ async function callAIBatchMeanings(words) {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
-          'HTTP-Referer': window.location.origin || 'https://happylearner.vercel.app',
+          'HTTP-Referer': window.location.origin || 'https://happylearner2077.vercel.app',
           'X-Title': 'HappyLearner'
         },
         body: JSON.stringify({

@@ -85,7 +85,7 @@ async function signInWithGoogle() {
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin || 'https://happy-learner.vercel.app'
+      redirectTo: window.location.origin || 'https://happylearner2077.vercel.app'
     }
   });
   if (error) throw error;
