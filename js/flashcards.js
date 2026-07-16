@@ -166,7 +166,7 @@ function renderMiniCard(word) {
           <div class="grid-tier">${tierLabel}</div>
         </div>
         <div class="grid-card-back">
-          <div class="grid-meaning">${word.chinese_meaning || t('common.placeholders')}</div>
+          <div class="grid-meaning">${word.chinese_meaning || '<span class="text-light">(未有翻譯)</span>'}</div>
           <div class="grid-pos">${posLabels}</div>
           ${isVerb ? `<div class="grid-forms"><small>${forms.past}, ${forms.pp}</small></div>` : ''}
           ${displaySentence ? `<div class="grid-sentence">${displaySentence}</div>` : ''}

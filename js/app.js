@@ -261,6 +261,7 @@ async function openVocabularyBook() {
       
       <div class="vocab-actions">
         <button class="btn btn-primary" onclick="showAddWordsPage()">➕ ${t('english.addWords')}</button>
+        <button class="btn btn-outline btn-sm" onclick="translateAllMeanings()">🌐 Translate All</button>
         <input type="text" class="input search-input" id="vocabSearch" 
                placeholder="${t('english.search')}" 
                oninput="searchVocabList(this.value)">
@@ -362,6 +363,27 @@ async function searchVocabList(query) {
   if (list) {
     list.innerHTML = renderVocabList(words);
   }
+}
+
+async function translateAllMeanings() {
+  const words = await fetchVocabulary();
+  const needTranslate = words.filter(w => !w.chinese_meaning || !w.chinese_meaning.trim());
+  if (!needTranslate.length) { showToast('✅ All words already have meanings!'); return; }
+  if (!confirm(`Translate ${needTranslate.length} words to Chinese?`)) return;
+  showLoading();
+  const batch = needTranslate.map(w => ({ word: w.word, meaning: w.chinese_meaning }));
+  await callAIBatchMeanings(batch);
+  let count = 0;
+  for (let i = 0; i < needTranslate.length; i++) {
+    if (batch[i].meaning && batch[i].meaning !== needTranslate[i].chinese_meaning) {
+      await supabaseClient.from('vocabulary').update({ chinese_meaning: batch[i].meaning }).eq('id', needTranslate[i].id);
+      needTranslate[i].chinese_meaning = batch[i].meaning;
+      count++;
+    }
+  }
+  hideLoading();
+  openVocabularyBook();
+  showToast(`✅ ${count} words translated!`);
 }
 
 // ============================================================
