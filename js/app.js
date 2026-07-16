@@ -290,7 +290,7 @@ function renderVocabList(words) {
   return words.map(w => {
     const posArr = w.part_of_speech ? w.part_of_speech.split(',') : [];
     const posLabels = posArr.map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
-    const tierLabel = LEVELS[w.level]?.label[currentLang] || '';
+    const tierLabel = getTierLabel(w.level);
     
     return `
       <div class="vocab-row" data-id="${w.id}">
@@ -301,7 +301,7 @@ function renderVocabList(words) {
         </span>
         <span class="col-pos">${posLabels}</span>
         <span class="col-level">
-          <span class="level-badge level-${w.level}">${w.level} · ${tierLabel}</span>
+          <span class="level-badge level-${w.level}">${tierLabel}</span>
         </span>
         <span class="col-actions">
           <button class="btn-icon" onclick="editMeaning('${w.id}')" title="${t('english.edit')}">✏️</button>

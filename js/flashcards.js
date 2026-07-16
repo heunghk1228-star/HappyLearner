@@ -1,10 +1,10 @@
 // ============================================================
-// Flash Cards Module
+// Flash Cards Module — Grid View with Pagination
 // ============================================================
 
 let currentFlashcards = [];
-let currentCardIndex = 0;
-let isFlipped = false;
+let currentPage = 0;
+const CARDS_PER_PAGE = 12;
 
 // Fallback sample sentences for common words
 const FALLBACK_SENTENCES = {
@@ -81,7 +81,6 @@ const FALLBACK_SENTENCES = {
   'knowledge': 'Knowledge is power.',
   'experience': 'I gained valuable experience.',
   'information': 'Please read the information carefully.',
-  'practice': 'Regular practice is essential.',
   'problem': 'Can you solve this problem?',
   'question': 'Do you have any question?',
   'answer': 'Please write your answer clearly.',
@@ -106,191 +105,89 @@ function getFallbackSentence(word) {
   return FALLBACK_SENTENCES[word.toLowerCase()] || null;
 }
 
+// ============================================================
+// Render flashcard grid
+// ============================================================
+
 function renderFlashcards(words) {
   currentFlashcards = words;
-  currentCardIndex = 0;
-  isFlipped = false;
-  
+  currentPage = 0;
+  renderGrid();
+}
+
+function renderGrid() {
   const container = document.getElementById('flashcardContainer');
   if (!container) return;
-  
-  if (!words.length) {
+
+  if (!currentFlashcards.length) {
     container.innerHTML = `<div class="empty-state">${t('common.placeholders')}</div>`;
     return;
   }
-  
-  renderCard();
+
+  const totalPages = Math.ceil(currentFlashcards.length / CARDS_PER_PAGE);
+  const start = currentPage * CARDS_PER_PAGE;
+  const pageWords = currentFlashcards.slice(start, start + CARDS_PER_PAGE);
+
+  let html = `<div class="flashcard-grid">`;
+  for (const word of pageWords) {
+    html += renderMiniCard(word);
+  }
+  html += `</div>`;
+
+  // Pagination
+  html += `<div class="grid-pagination">
+    <span class="page-info">${t('english.question')} ${start + 1}–${Math.min(start + CARDS_PER_PAGE, currentFlashcards.length)} ${t('english.of')} ${currentFlashcards.length}</span>
+    <div class="pagination-actions">
+      <button class="btn btn-outline btn-sm" onclick="prevPage()" ${currentPage === 0 ? 'disabled' : ''}>◀ ${t('english.back')}</button>
+      <span class="page-num">${currentPage + 1} / ${totalPages}</span>
+      <button class="btn btn-primary btn-sm" onclick="nextPage()" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>${t('english.nextQuestion')} ▶</button>
+    </div>
+  </div>`;
+
+  container.innerHTML = html;
 }
 
-function renderCard() {
-  const container = document.getElementById('flashcardContainer');
-  if (!container) return;
-  
-  const word = currentFlashcards[currentCardIndex];
-  if (!word) {
-    container.innerHTML = `<div class="empty-state">${t('common.loading')}</div>`;
-    return;
-  }
-  
+function renderMiniCard(word) {
   const posArr = word.part_of_speech ? word.part_of_speech.split(',') : detectPOS(word.word);
   const posLabels = posArr.map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
   const forms = getWordForms(word.word);
   const isVerb = posArr.includes('verb');
-  
-  const total = currentFlashcards.length;
-  
-  // Check if we have a sentence
+  const tierLabel = getTierLabel(word.level);
   const hasSentence = word.sample_sentence && word.sample_sentence.length > 0;
   const fallback = !hasSentence ? getFallbackSentence(word.word) : null;
   const displaySentence = word.sample_sentence || fallback || '';
-  
-  container.innerHTML = `
-    <div class="card-progress">
-      <span>${currentCardIndex + 1} / ${total}</span>
-    </div>
-    <div class="flashcard ${isFlipped ? 'flipped' : ''}" onclick="toggleFlip()">
-      <div class="flashcard-inner">
-        <div class="flashcard-front">
-          <div class="card-word">${word.word}</div>
-          <button class="sound-btn" onclick="event.stopPropagation(); speakWord('${word.word}')" title="${t('english.pronunciation')}">
-            🔊
-          </button>
-          ${isVerb ? `
-          <div class="word-forms">
-            <div><small>${t('english.pastTense')}:</small> ${forms.past}</div>
-            <div><small>${t('english.pastParticiple')}:</small> ${forms.pp}</div>
-            <div><small>${t('english.presentParticiple')}:</small> ${forms.ing}</div>
-            <div><small>${t('english.thirdPerson')}:</small> ${forms.s}</div>
-          </div>
-          ` : ''}
-          <div class="card-hint">${t('english.flip')}</div>
+
+  return `
+    <div class="grid-card" onclick="this.classList.toggle('flipped')">
+      <div class="grid-card-inner">
+        <div class="grid-card-front">
+          <div class="grid-word">${word.word}</div>
+          <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWord('${word.word}')" title="${t('english.pronunciation')}">🔊</button>
+          <div class="grid-tier">${tierLabel}</div>
         </div>
-        <div class="flashcard-back">
-          <div class="card-meaning">${word.chinese_meaning || ''}</div>
-          <div class="card-pos">${posLabels}</div>
-          <div class="card-level">
-            ${t('english.level')}: ${word.level} — ${LEVELS[word.level]?.label[currentLang] || ''}
-          </div>
-          <div class="card-sentence">
-            <small>${t('english.sampleSentence')}:</small>
-            ${displaySentence 
-              ? `<p>${displaySentence}</p>`
-              : `<div class="no-sentence">
-                   <p class="text-light">${t('common.placeholders')}</p>
-                   <button class="btn btn-sm btn-ai" onclick="event.stopPropagation(); generateSentenceForCard('${word.id}')">
-                     ✨ Generate with AI
-                   </button>
-                 </div>`
-            }
-            ${fallback && !hasSentence ? `<small class="sentence-source">📝 Fallback</small>` : ''}
-          </div>
+        <div class="grid-card-back">
+          <div class="grid-meaning">${word.chinese_meaning || t('common.placeholders')}</div>
+          <div class="grid-pos">${posLabels}</div>
+          ${isVerb ? `<div class="grid-forms"><small>${forms.past}, ${forms.pp}</small></div>` : ''}
+          ${displaySentence ? `<div class="grid-sentence">${displaySentence}</div>` : ''}
         </div>
       </div>
-    </div>
-    <div class="card-nav">
-      <button class="btn btn-outline" onclick="prevCard()" ${currentCardIndex === 0 ? 'disabled' : ''}>
-        ◀ ${t('english.back')}
-      </button>
-      <button class="btn btn-primary" onclick="nextCard()">
-        ${currentCardIndex < total - 1 ? (t('english.nextQuestion') + ' ▶') : '✅ ' + t('english.finishTest')}
-      </button>
     </div>
   `;
 }
 
-async function generateSentenceForCard(wordId) {
-  const word = currentFlashcards.find(w => w.id === wordId);
-  if (!word) return;
-  
-  const btn = document.querySelector('.no-sentence .btn-ai');
-  if (btn) {
-    btn.textContent = '⏳ Generating...';
-    btn.disabled = true;
-  }
-  
-  try {
-    const sentence = await callAISentence(word.word);
-    if (sentence) {
-      // Save to database
-      const { error } = await supabaseClient
-        .from('vocabulary')
-        .update({ sample_sentence: sentence })
-        .eq('id', wordId);
-      
-      if (!error) {
-        word.sample_sentence = sentence;
-        renderCard();
-        showToast('✅ Sentence generated!');
-      }
-    } else {
-      // Fallback
-      const fallback = getFallbackSentence(word.word) || `This is a sample sentence using the word "${word.word}".`;
-      word.sample_sentence = fallback;
-      const { error } = await supabaseClient
-        .from('vocabulary')
-        .update({ sample_sentence: fallback })
-        .eq('id', wordId);
-      if (!error) renderCard();
-      showToast('📝 Fallback sentence used');
-    }
-  } catch (e) {
-    showToast('❌ AI failed: ' + e.message);
-    if (btn) {
-      btn.textContent = '✨ Generate with AI';
-      btn.disabled = false;
-    }
+function nextPage() {
+  const totalPages = Math.ceil(currentFlashcards.length / CARDS_PER_PAGE);
+  if (currentPage < totalPages - 1) {
+    currentPage++;
+    renderGrid();
   }
 }
 
-async function callAISentence(word) {
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
-      'HTTP-Referer': window.location.origin || 'https://learning-toolkit.local',
-      'X-Title': 'Learning Toolkit'
-    },
-    body: JSON.stringify({
-      model: CONFIG.openai.model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a teacher. Generate ONE simple English sentence using the given word. The sentence should be suitable for F3 (Grade 9, age 14-15) students. Return ONLY the sentence, nothing else.'
-        },
-        {
-          role: 'user',
-          content: `Generate a sentence using the word "${word}".`
-        }
-      ],
-      max_tokens: 100,
-      temperature: 0.7
-    })
-  });
-  
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || `API error (${response.status})`);
-  return data.choices?.[0]?.message?.content?.trim() || '';
-}
-
-function toggleFlip() {
-  isFlipped = !isFlipped;
-  renderCard();
-}
-
-function nextCard() {
-  if (currentCardIndex < currentFlashcards.length - 1) {
-    currentCardIndex++;
-    isFlipped = false;
-    renderCard();
-  }
-}
-
-function prevCard() {
-  if (currentCardIndex > 0) {
-    currentCardIndex--;
-    isFlipped = false;
-    renderCard();
+function prevPage() {
+  if (currentPage > 0) {
+    currentPage--;
+    renderGrid();
   }
 }
 
@@ -304,15 +201,50 @@ function speakWord(word) {
   }
 }
 
+// ============================================================
+// AI sentence generation (per card)
+// ============================================================
+
+async function callAISentence(word) {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
+      'HTTP-Referer': window.location.origin || 'https://happylearner.vercel.app',
+      'X-Title': 'HappyLearner'
+    },
+    body: JSON.stringify({
+      model: CONFIG.openai.model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a teacher. Generate ONE simple English sentence using the given word. Suitable for F3 (Grade 9, age 14-15) students. Return ONLY the sentence, nothing else.'
+        },
+        { role: 'user', content: `Generate a sentence using the word "${word}".` }
+      ],
+      max_tokens: 100,
+      temperature: 0.7
+    })
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error?.message || `API error (${response.status})`);
+  return data.choices?.[0]?.message?.content?.trim() || '';
+}
+
+// ============================================================
+// Open flash cards page
+// ============================================================
+
 async function openFlashcards() {
   if (!currentUser) {
     alert(t('english.loginRequired'));
     return;
   }
-  
+
   showLoading();
   const words = await fetchVocabulary();
-  
+
   const page = document.getElementById('pageContent');
   page.innerHTML = `
     <div class="page-header">
@@ -324,69 +256,47 @@ async function openFlashcards() {
           <option value="well-tested">${t('english.wellTested')}</option>
           <option value="mastered">${t('english.mastered')}</option>
         </select>
-        <button class="btn btn-outline btn-sm" onclick="generateAllSentences()" style="margin-left:0.5rem">
-          ✨ Generate All Sentences
-        </button>
+        <button class="btn btn-outline btn-sm" onclick="generateAllSentences()" style="margin-left:0.5rem">✨ Generate All Sentences</button>
       </div>
     </div>
     <div id="flashcardContainer"></div>
   `;
-  
+
   currentFlashcards = words;
   renderFlashcards(words);
   hideLoading();
 }
 
 async function generateAllSentences() {
-  const wordsWithoutSentences = currentFlashcards.filter(
-    w => !w.sample_sentence && !getFallbackSentence(w.word)
-  );
-  
-  if (!wordsWithoutSentences.length) {
-    showToast('✅ All words already have sentences!');
-    return;
-  }
-  
-  if (!confirm(`Generate sentences for ${wordsWithoutSentences.length} words? This may take a while.`)) return;
-  
+  const wordsWithout = currentFlashcards.filter(w => !w.sample_sentence && !getFallbackSentence(w.word));
+  if (!wordsWithout.length) { showToast('✅ All words have sentences!'); return; }
+  if (!confirm(`Generate sentences for ${wordsWithout.length} words?`)) return;
+
   showLoading();
   let count = 0;
-  
-  for (const word of wordsWithoutSentences) {
+  for (const w of wordsWithout) {
     try {
-      const sentence = await callAISentence(word.word);
+      const sentence = await callAISentence(w.word);
       if (sentence) {
-        await supabaseClient
-          .from('vocabulary')
-          .update({ sample_sentence: sentence })
-          .eq('id', word.id);
-        word.sample_sentence = sentence;
+        await supabaseClient.from('vocabulary').update({ sample_sentence: sentence }).eq('id', w.id);
+        w.sample_sentence = sentence;
         count++;
       }
-      // Small delay to avoid rate limiting
-      await new Promise(r => setTimeout(r, 500));
-    } catch (e) {
-      // Use fallback
-      const fallback = `This is a sample sentence using the word "${word.word}".`;
-      await supabaseClient
-        .from('vocabulary')
-        .update({ sample_sentence: fallback })
-        .eq('id', word.id);
-      word.sample_sentence = fallback;
+    } catch {
+      const fb = `This is a sample sentence using the word "${w.word}".`;
+      await supabaseClient.from('vocabulary').update({ sample_sentence: fb }).eq('id', w.id);
+      w.sample_sentence = fb;
       count++;
     }
+    await new Promise(r => setTimeout(r, 500));
   }
-  
   hideLoading();
-  renderCard();
-  showToast(`✅ ${count}/${wordsWithoutSentences.length} sentences generated!`);
+  renderGrid();
+  showToast(`✅ ${count}/${wordsWithout.length} sentences generated!`);
 }
 
 function filterFlashcards() {
-  const filter = document.getElementById('flashcardFilter').value;
-  if (filter === 'all') {
-    fetchVocabulary().then(words => renderFlashcards(words));
-  } else {
-    getWordsByTier(filter).then(words => renderFlashcards(words));
-  }
+  const f = document.getElementById('flashcardFilter').value;
+  if (f === 'all') fetchVocabulary().then(renderFlashcards);
+  else getWordsByTier(f).then(renderFlashcards);
 }

@@ -11,6 +11,14 @@ const LEVELS = {
   6: { tier: 'mastered', label: { 'zh-TW': '已精通', 'zh-CN': '已精通', 'en': 'Mastered' } }
 };
 
+function getTierLabel(level) {
+  return LEVELS[level]?.label?.[currentLang] || '';
+}
+
+function getTierName(level) {
+  return LEVELS[level]?.tier || 'newbee';
+}
+
 const POS_MAP = {
   'verb': { 'zh-TW': '動詞', 'zh-CN': '动词', 'en': 'Verb' },
   'noun': { 'zh-TW': '名詞', 'zh-CN': '名词', 'en': 'Noun' },
@@ -287,6 +295,12 @@ async function bulkAddWords(words) {
     .eq('user_id', currentUser.id);
   const existingSet = new Set((existing || []).map(e => e.word));
   
+  // AI batch translate missing meanings
+  const newWords = normalizedWords.filter(w => !existingSet.has(w.normalized));
+  if (newWords.length > 0) {
+    await callAIBatchMeanings(newWords);
+  }
+  
   const toInsert = [];
   for (const w of normalizedWords) {
     if (existingSet.has(w.normalized)) {
@@ -414,4 +428,76 @@ async function getCheckInStreak() {
     }
   }
   return streak;
+}
+
+// ============================================================
+// AI: Batch Chinese meaning generation
+// ============================================================
+
+async function callAIBatchMeanings(words) {
+  // Only translate words without a meaning
+  const needMeaning = words.filter(w => !w.meaning || !w.meaning.trim());
+  if (!needMeaning.length) return;
+  
+  const BATCH_SIZE = 20;
+  const batches = [];
+  for (let i = 0; i < needMeaning.length; i += BATCH_SIZE) {
+    batches.push(needMeaning.slice(i, i + BATCH_SIZE));
+  }
+  
+  for (const batch of batches) {
+    try {
+      const wordList = batch.map(w => w.word || w).join('\n');
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
+          'HTTP-Referer': window.location.origin || 'https://happylearner.vercel.app',
+          'X-Title': 'HappyLearner'
+        },
+        body: JSON.stringify({
+          model: CONFIG.openai.model || 'deepseek/deepseek-v4-flash',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a translator. Translate each English word to Traditional Chinese (Hong Kong). Return ONLY a JSON object like {"word1":"翻譯1","word2":"翻譯2"}. No explanations, no markdown.'
+            },
+            {
+              role: 'user',
+              content: `Translate these English words to Traditional Chinese:\n${wordList}`
+            }
+          ],
+          max_tokens: 1000,
+          temperature: 0.1
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || 'API error');
+      
+      const text = data.choices?.[0]?.message?.content?.trim() || '{}';
+      // Try to parse JSON from the response
+      let translations = {};
+      try {
+        // Handle potential markdown code blocks
+        const jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        translations = JSON.parse(jsonStr);
+      } catch (e) {
+        console.warn('Failed to parse AI translation:', text);
+        continue;
+      }
+      
+      // Assign meanings back to the words
+      for (const w of batch) {
+        const wordKey = (w.word || w).toLowerCase();
+        if (translations[wordKey] && (!w.meaning || !w.meaning.trim())) {
+          w.meaning = translations[wordKey];
+        }
+      }
+    } catch (e) {
+      console.warn('AI batch translation failed:', e.message);
+      // Continue without AI meanings rather than failing entirely
+    }
+  }
 }
