@@ -16,6 +16,7 @@ async function showRevisionPage() {
     alert(t('english.loginRequired'));
     return;
   }
+  history.replaceState({}, '', '#english/revision');
   
   const page = document.getElementById('pageContent');
   page.innerHTML = `
@@ -187,9 +188,7 @@ function renderSpellingQuestion(q) {
   const word = q.word.word;
   return `
     <div class="question-type">${t('english.listenAndType')}</div>
-    <div class="sound-btn-large" onclick="speakWord('${word}')">
-      🔊 ${t('english.pronunciation')}
-    </div>
+    <div class="sound-btn-large" onclick="speakWord('${word}')">🔊</div>
     <div class="question-word-hint">
       <small>${q.word.chinese_meaning || ''}</small>
     </div>

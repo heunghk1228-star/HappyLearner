@@ -241,6 +241,7 @@ async function openFlashcards() {
     alert(t('english.loginRequired'));
     return;
   }
+  history.replaceState({}, '', '#english/flashcards');
 
   showLoading();
   const words = await fetchVocabulary();

@@ -7,7 +7,6 @@
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Init supabase
   await initSupabase();
   
   // Set up language selector
@@ -17,11 +16,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       setLanguage(lang);
-      // Re-render current page
-      const activePage = document.querySelector('.nav-link.active');
-      if (activePage) {
-        navigateTo(activePage.dataset.page);
-      }
+      const page = getCurrentPageFromHash();
+      navigateTo(page, true);
     });
   });
   
@@ -30,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const page = link.dataset.page;
-      navigateTo(page);
+      navigateTo(page, true);
     });
   });
   
@@ -40,7 +36,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await logout();
   });
   
-  // Hide modals on click outside
   document.getElementById('authModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) hideAuthModal();
   });
@@ -50,27 +45,50 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelector(`.lang-btn[data-lang="${savedLang}"]`)?.classList.add('active');
   setLanguage(savedLang);
   
-  // Navigate to default page
-  navigateTo('about');
+  // Hash-based routing
+  window.addEventListener('hashchange', () => {
+    const page = getCurrentPageFromHash();
+    navigateTo(page, false);
+  });
+  
+  // Navigate to initial page from hash or default
+  const initialPage = getCurrentPageFromHash() || 'about';
+  navigateTo(initialPage, false);
   
   // Auth callback
   window.onAuthChange = (user) => {
     if (user) {
       hideAuthModal();
-      // Refresh current page if on English tools
-      const activePage = document.querySelector('.nav-link.active');
-      if (activePage && activePage.dataset.page === 'english') {
-        navigateTo('english');
-      }
+      const page = getCurrentPageFromHash();
+      if (page === 'english') navigateTo('english', true);
     }
   };
 });
+
+function getCurrentPageFromHash() {
+  const hash = window.location.hash.replace('#', '');
+  if (!hash) return null;
+  // Handle sub-pages: english/vocab -> english
+  return hash.split('/')[0];
+}
+
+function getCurrentSubPageFromHash() {
+  const hash = window.location.hash.replace('#', '');
+  const parts = hash.split('/');
+  return parts.length > 1 ? parts[1] : null;
+}
 
 // ============================================================
 // Navigation
 // ============================================================
 
-function navigateTo(page) {
+function navigateTo(page, pushHash) {
+  // Update URL hash when user navigates (not on hashchange events)
+  if (pushHash) {
+    window.location.hash = page;
+    return; // hashchange will trigger navigateTo again with pushHash=false
+  }
+  
   // Update active nav link
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   const navLink = document.querySelector(`.nav-link[data-page="${page}"]`);
@@ -81,14 +99,22 @@ function navigateTo(page) {
   switch (page) {
     case 'about': renderAboutPage(content); break;
     case 'chinese': renderComingSoonPage(content, 'chinese'); break;
-    case 'english': renderEnglishPage(content); break;
+    case 'english':
+      renderEnglishPage(content);
+      // Handle sub-pages after English page renders
+      setTimeout(() => {
+        const sub = getCurrentSubPageFromHash();
+        if (sub === 'vocab') openVocabularyBook();
+        else if (sub === 'flashcards') openFlashcards();
+        else if (sub === 'revision') showRevisionPage();
+      }, 10);
+      break;
     case 'math': renderComingSoonPage(content, 'math'); break;
     case 'science': renderComingSoonPage(content, 'science'); break;
     case 'humanities': renderComingSoonPage(content, 'humanities'); break;
     default: renderAboutPage(content);
   }
   
-  // Scroll to top
   window.scrollTo(0, 0);
 }
 
@@ -232,6 +258,7 @@ async function doDailyCheckIn() {
 // ============================================================
 
 async function openVocabularyBook() {
+  history.replaceState({}, '', '#english/vocab');
   showLoading();
   const words = await fetchVocabulary();
   
@@ -261,7 +288,6 @@ async function openVocabularyBook() {
       
       <div class="vocab-actions">
         <button class="btn btn-primary" onclick="showAddWordsPage()">➕ ${t('english.addWords')}</button>
-        <button class="btn btn-outline btn-sm" onclick="translateAllMeanings()">🌐 Translate All</button>
         <input type="text" class="input search-input" id="vocabSearch" 
                placeholder="${t('english.search')}" 
                oninput="searchVocabList(this.value)">
@@ -363,27 +389,6 @@ async function searchVocabList(query) {
   if (list) {
     list.innerHTML = renderVocabList(words);
   }
-}
-
-async function translateAllMeanings() {
-  const words = await fetchVocabulary();
-  const needTranslate = words.filter(w => !w.chinese_meaning || !w.chinese_meaning.trim());
-  if (!needTranslate.length) { showToast('✅ All words already have meanings!'); return; }
-  if (!confirm(`Translate ${needTranslate.length} words to Chinese?`)) return;
-  showLoading();
-  const batch = needTranslate.map(w => ({ word: w.word, meaning: w.chinese_meaning }));
-  await callAIBatchMeanings(batch);
-  let count = 0;
-  for (let i = 0; i < needTranslate.length; i++) {
-    if (batch[i].meaning && batch[i].meaning !== needTranslate[i].chinese_meaning) {
-      await supabaseClient.from('vocabulary').update({ chinese_meaning: batch[i].meaning }).eq('id', needTranslate[i].id);
-      needTranslate[i].chinese_meaning = batch[i].meaning;
-      count++;
-    }
-  }
-  hideLoading();
-  openVocabularyBook();
-  showToast(`✅ ${count} words translated!`);
 }
 
 // ============================================================
@@ -634,5 +639,5 @@ function showToast(message) {
 }
 
 function showEnglishPage() {
-  navigateTo('english');
+  navigateTo('english', true);
 }
