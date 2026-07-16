@@ -124,11 +124,14 @@ function renderGrid() {
     return;
   }
 
+  // Show AI status indicator
+  const aiStatus = CONFIG.openai.apiKey ? '' : '<div class="ai-warning">⚠️ AI 未設定 — 檢查 API Key</div>';
+
   const totalPages = Math.ceil(currentFlashcards.length / CARDS_PER_PAGE);
   const start = currentPage * CARDS_PER_PAGE;
   const pageWords = currentFlashcards.slice(start, start + CARDS_PER_PAGE);
 
-  let html = `<div class="flashcard-grid">`;
+  let html = aiStatus + `<div class="flashcard-grid">`;
   for (const word of pageWords) {
     html += renderMiniCard(word);
   }
@@ -140,7 +143,7 @@ function renderGrid() {
     <div class="pagination-actions">
       <button class="btn btn-outline btn-sm" onclick="prevPage()" ${currentPage === 0 ? 'disabled' : ''}>◀ ${t('english.back')}</button>
       <span class="page-num">${currentPage + 1} / ${totalPages}</span>
-      <button class="btn btn-primary btn-sm" onclick="nextPage()" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>${t('english.nextQuestion')} ▶</button>
+      <button class="btn btn-primary btn-sm" onclick="nextPage()" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>${t('english.nextPage')} ▶</button>
     </div>
   </div>`;
 
@@ -169,7 +172,10 @@ function renderMiniCard(word) {
           <div class="grid-meaning">${word.chinese_meaning || '<span class="text-light">(未有翻譯)</span>'}</div>
           <div class="grid-pos">${posLabels}</div>
           ${isVerb ? `<div class="grid-forms"><small>${forms.past}, ${forms.pp}</small></div>` : ''}
-          ${displaySentence ? `<div class="grid-sentence">${displaySentence}</div>` : ''}
+          ${displaySentence 
+            ? `<div class="grid-sentence">${displaySentence}
+               <button class="btn-regenerate" onclick="event.stopPropagation(); regenerateSentence('${word.id}')" title="Regenerate">🔄</button></div>`
+            : `<div class="grid-sentence"><button class="btn-regenerate" onclick="event.stopPropagation(); regenerateSentence('${word.id}')">✨ Generate</button></div>`}
         </div>
       </div>
     </div>
@@ -294,6 +300,26 @@ async function generateAllSentences() {
   hideLoading();
   renderGrid();
   showToast(`✅ ${count}/${wordsWithout.length} sentences generated!`);
+}
+
+async function regenerateSentence(wordId) {
+  const word = currentFlashcards.find(w => w.id === wordId);
+  if (!word) return;
+  try {
+    const sentence = await callAISentence(word.word);
+    if (sentence) {
+      await supabaseClient.from('vocabulary').update({ sample_sentence: sentence }).eq('id', wordId);
+      word.sample_sentence = sentence;
+    } else {
+      const fb = getFallbackSentence(word.word) || `This is a sample sentence using the word "${word.word}".`;
+      await supabaseClient.from('vocabulary').update({ sample_sentence: fb }).eq('id', wordId);
+      word.sample_sentence = fb;
+    }
+    renderGrid();
+    showToast('✅ Sentence updated!');
+  } catch (e) {
+    showToast('❌ AI failed: ' + e.message);
+  }
 }
 
 function filterFlashcards() {
