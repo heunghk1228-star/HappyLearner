@@ -532,7 +532,7 @@ async function callAIBatchNormalize(words) {
           messages: [
             {
               role: 'system',
-              content: 'You are a linguist. Convert each word to its base form: verbs to present tense, nouns to singular. Keep number words (ten, five, hundred), prepositions (in, on, at), and other function words as-is. Skip proper nouns/names (return empty). Return ONLY a JSON object like {"ran":"run","apples":"apple","ten":"ten","John":""}. No explanations, no markdown.'
+              content: 'You are a linguist. Convert each word to its base form: verbs to present tense, nouns to singular. Keep number words (ten, five), prepositions, country/race names (Chinese, English, Asian), and function words. Skip ONLY personal names (Peter, John, Mary — return empty). Return ONLY a JSON object like {"ran":"run","apples":"apple","ten":"ten","Chinese":"Chinese","Peter":""}. No explanations, no markdown.'
             },
             {
               role: 'user',

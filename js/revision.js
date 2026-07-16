@@ -357,6 +357,9 @@ function finishTest() {
   const area = document.getElementById('revisionArea');
   const earnedGem = correctCount > 5;
   
+  // Auto check-in
+  doCheckIn().catch(() => {});
+  
   if (earnedGem) {
     // Add gem
     getProfile().then(profile => {

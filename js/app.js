@@ -402,16 +402,29 @@ function showAddWordsPage() {
   content.innerHTML = `
     <div class="add-words-page">
       <h3>${t('english.inputWords')}</h3>
-      <p class="guide">${t('english.inputGuide')}</p>
-      <div class="tips">
-        <small>✅ ${t('english.noDuplicate')}</small><br>
-        <small>✅ ${t('english.nounSingular')}</small><br>
-        <small>✅ ${t('english.verbPresent')}</small>
+      <div class="input-mode-tabs">
+        <button class="tab-btn active" data-mode="manual" onclick="switchInputMode('manual')">✏️ Manual</button>
+        <button class="tab-btn" data-mode="article" onclick="switchInputMode('article')">📄 Article (AI)</button>
       </div>
-      <textarea class="input textarea-input" id="wordInput" rows="8" 
-                placeholder="${t('english.inputPlaceholder')}"></textarea>
-      <div class="word-count" id="wordCount">0 / 100 ${t('english.words')}</div>
-      <button class="btn btn-primary" onclick="processWordInput()">${t('english.submit')}</button>
+      
+      <!-- Manual mode -->
+      <div id="inputModeManual" class="input-mode-panel">
+        <p class="guide">Type words separated by commas or line breaks.</p>
+        <textarea class="input textarea-input" id="wordInputManual" rows="6" 
+                  placeholder="apple, banana, cat, dog, elephant"></textarea>
+        <div class="word-count" id="wordCountManual">0 words</div>
+        <button class="btn btn-primary" onclick="processManualInput()">${t('english.submit')}</button>
+      </div>
+      
+      <!-- Article mode -->
+      <div id="inputModeArticle" class="input-mode-panel hidden">
+        <p class="guide">Paste an article — AI will extract base forms and skip names.</p>
+        <textarea class="input textarea-input" id="wordInputArticle" rows="6" 
+                  placeholder="Peter has ten toes. He doesn't like apples."></textarea>
+        <div class="word-count" id="wordCountArticle">0 words</div>
+        <button class="btn btn-primary" onclick="processArticleInput()">${t('english.submit')} (AI)...</button>
+      </div>
+      
       <div id="addResult" class="add-result"></div>
       <button class="btn btn-outline" onclick="openVocabularyBook()" style="margin-top: 1rem;">
         ${t('english.back')}
@@ -419,26 +432,59 @@ function showAddWordsPage() {
     </div>
   `;
   
-  // Word count
-  document.getElementById('wordInput').addEventListener('input', function() {
+  // Word count for both modes
+  document.getElementById('wordInputManual').addEventListener('input', function() {
+    const words = this.value.trim().split(/[,\n]+/).map(w => w.trim()).filter(w => w.length > 0);
+    document.getElementById('wordCountManual').textContent = `${words.length} words`;
+  });
+  document.getElementById('wordInputArticle').addEventListener('input', function() {
     const words = this.value.trim().split(/\s+/).filter(w => w.length > 0);
-    document.getElementById('wordCount').textContent = `${words.length} / 100 ${t('english.words')}`;
+    document.getElementById('wordCountArticle').textContent = `${words.length} words`;
   });
 }
 
-async function processWordInput() {
-  const textarea = document.getElementById('wordInput');
+function switchInputMode(mode) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.tab-btn[data-mode="${mode}"]`).classList.add('active');
+  document.querySelectorAll('.input-mode-panel').forEach(p => p.classList.add('hidden'));
+  document.getElementById(`inputMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.remove('hidden');
+}
+
+// Manual input: word-by-word, no AI normalization
+async function processManualInput() {
+  const text = document.getElementById('wordInputManual').value.trim();
+  if (!text) return;
+  
+  const words = text.split(/[,\n]+/).map(w => w.trim().toLowerCase()).filter(w => w.length > 1 && /^[a-z]/.test(w));
+  const seen = new Set();
+  const unique = [];
+  for (const w of words) {
+    if (!seen.has(w)) { seen.add(w); unique.push({ word: w, pos: detectPOS(w) }); }
+  }
+  if (!unique.length) { document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; return; }
+  
+  showLoading();
+  try {
+    const result = await bulkAddWords(unique.slice(0, 100));
+    document.getElementById('addResult').innerHTML = `
+      <div class="result-success">✅ ${t('english.wordAdded')}</div>
+      <div class="result-details"><span>➕ New: ${result.added}</span><span>⏭️ Duplicates: ${result.duplicates}</span></div>`;
+    document.getElementById('wordInputManual').value = '';
+    document.getElementById('wordCountManual').textContent = '0 words';
+  } catch (e) {
+    document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
+  }
+  hideLoading();
+}
+
+// Article input: AI normalization + name filtering
+async function processArticleInput() {
+  const textarea = document.getElementById('wordInputArticle');
   const text = textarea.value.trim();
   if (!text) return;
   
-  // Extract words preserving case (to detect names later)
-  const rawWords = text
-    .replace(/[^\w\s'-]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 1 && /^[a-zA-Z]/.test(w));
-  
-  // Split contractions: doesn't → does not, don't → do not, can't → cannot, etc.
-  const expanded = [];
+  // Extract words, split contractions
+  let raw = text.replace(/[^\w\s'-]/g, ' ').split(/\s+/).filter(w => w.length > 1 && /^[a-zA-Z]/.test(w));
   const CONTRACTIONS = {
     "doesn't": "does not", "don't": "do not", "can't": "cannot", "couldn't": "could not",
     "wouldn't": "would not", "shouldn't": "should not", "won't": "will not",
@@ -453,80 +499,45 @@ async function processWordInput() {
     "i'd": "i would", "you'd": "you would", "he'd": "he would", "she'd": "she would",
     "we'd": "we would", "they'd": "they would"
   };
-  for (const w of rawWords) {
-    const lower = w.toLowerCase();
-    if (CONTRACTIONS[lower]) {
-      expanded.push(...CONTRACTIONS[lower].split(' '));
-    } else {
-      expanded.push(w);
-    }
+  const expanded = [];
+  for (const w of raw) {
+    expanded.push(...(CONTRACTIONS[w.toLowerCase()] || w).split(' '));
   }
   
-  // Detect names: skip capitalized words that aren't at the start of sentences
-  const sentences = text.split(/[.!?]\s*/);
-  const firstWords = new Set(sentences.map(s => s.trim().split(/\s+/)[0]?.toLowerCase()).filter(Boolean));
-  const filtered = expanded.filter(w => {
-    const lower = w.toLowerCase();
-    // Skip if it's capitalized AND not at sentence start AND not a common word
-    if (w[0] === w[0].toUpperCase() && w[0] !== w[0].toLowerCase() && !firstWords.has(lower)) {
-      // Check if it's a common word that should be capitalized (like "I")
-      if (lower !== 'i') return false;
-    }
-    return true;
-  });
-  
-  // Remove duplicates preserving first occurrence
+  // Dedup
   const seen = new Set();
   const unique = [];
-  for (const w of filtered) {
+  for (const w of expanded) {
     const lower = w.toLowerCase();
-    if (!seen.has(lower)) {
-      seen.add(lower);
-      unique.push(lower);
-    }
+    if (!seen.has(lower)) { seen.add(lower); unique.push(lower); }
   }
   
-  // Limit to 100
-  const toNormalize = unique.slice(0, 100);
-  
-  if (!toNormalize.length) {
-    document.getElementById('addResult').innerHTML = `<div class="result-info">${t('common.placeholders')}</div>`;
-    return;
-  }
+  if (!unique.length) { document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; return; }
   
   showLoading();
-  
   try {
-    // Step 1: AI normalize words (present tense / singular form)
-    const normalized = await callAIBatchNormalize(toNormalize);
-    
-    // Step 2: Build word objects for bulkAdd
-    const wordObjects = [];
+    // AI normalize (skips people's names, keeps country/race names)
+    const normalized = await callAIBatchNormalize(unique.slice(0, 100));
+    const wordObjs = [];
     const seenNorm = new Set();
     for (const w of normalized) {
       if (!seenNorm.has(w.normalized) && w.normalized.length > 1) {
         seenNorm.add(w.normalized);
-        wordObjects.push({ word: w.normalized, pos: w.pos || detectPOS(w.normalized) });
+        wordObjs.push({ word: w.normalized, pos: w.pos || detectPOS(w.normalized) });
       }
     }
-    
-    if (!wordObjects.length) {
-      document.getElementById('addResult').innerHTML = `<div class="result-info">${t('common.placeholders')}</div>`;
-      hideLoading();
-      return;
+    if (!wordObjs.length && normalized.some(w => w.normalized)) {
+      // Use all normalized words that passed AI filter
     }
-    
-    // Step 3: Add to database (includes AI translation inside bulkAddWords)
-    const result = await bulkAddWords(wordObjects);
+    if (!wordObjs.length) {
+      document.getElementById('addResult').innerHTML = '<div class="result-info">No new words to add</div>';
+      hideLoading(); return;
+    }
+    const result = await bulkAddWords(wordObjs);
     document.getElementById('addResult').innerHTML = `
       <div class="result-success">✅ ${t('english.wordAdded')}</div>
-      <div class="result-details">
-        <span>➕ ${t('english.new')}: ${result.added}</span>
-        <span>⏭️ ${t('english.noDuplicate')}: ${result.duplicates}</span>
-      </div>
-    `;
+      <div class="result-details"><span>➕ New: ${result.added}</span><span>⏭️ Duplicates: ${result.duplicates}</span></div>`;
     textarea.value = '';
-    document.getElementById('wordCount').textContent = `0 / 100 ${t('english.words')}`;
   } catch (e) {
     document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
   }
