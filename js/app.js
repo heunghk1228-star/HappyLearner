@@ -437,10 +437,35 @@ async function processWordInput() {
     .split(/\s+/)
     .filter(w => w.length > 1 && /^[a-zA-Z]/.test(w));
   
+  // Split contractions: doesn't → does not, don't → do not, can't → cannot, etc.
+  const expanded = [];
+  const CONTRACTIONS = {
+    "doesn't": "does not", "don't": "do not", "can't": "cannot", "couldn't": "could not",
+    "wouldn't": "would not", "shouldn't": "should not", "won't": "will not",
+    "wasn't": "was not", "weren't": "were not", "hasn't": "has not", "haven't": "have not",
+    "hadn't": "had not", "didn't": "did not", "isn't": "is not", "aren't": "are not",
+    "mightn't": "might not", "mustn't": "must not", "needn't": "need not",
+    "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is",
+    "it's": "it is", "we're": "we are", "they're": "they are",
+    "i've": "i have", "you've": "you have", "we've": "we have", "they've": "they have",
+    "i'll": "i will", "you'll": "you will", "he'll": "he will", "she'll": "she will",
+    "we'll": "we will", "they'll": "they will",
+    "i'd": "i would", "you'd": "you would", "he'd": "he would", "she'd": "she would",
+    "we'd": "we would", "they'd": "they would"
+  };
+  for (const w of rawWords) {
+    const lower = w.toLowerCase();
+    if (CONTRACTIONS[lower]) {
+      expanded.push(...CONTRACTIONS[lower].split(' '));
+    } else {
+      expanded.push(w);
+    }
+  }
+  
   // Detect names: skip capitalized words that aren't at the start of sentences
   const sentences = text.split(/[.!?]\s*/);
   const firstWords = new Set(sentences.map(s => s.trim().split(/\s+/)[0]?.toLowerCase()).filter(Boolean));
-  const filtered = rawWords.filter(w => {
+  const filtered = expanded.filter(w => {
     const lower = w.toLowerCase();
     // Skip if it's capitalized AND not at sentence start AND not a common word
     if (w[0] === w[0].toUpperCase() && w[0] !== w[0].toLowerCase() && !firstWords.has(lower)) {
