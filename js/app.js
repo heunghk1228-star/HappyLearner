@@ -370,6 +370,9 @@ async function saveMeaning(id) {
 function cancelEdit(id) {
   document.getElementById(`meaning-${id}`).classList.remove('hidden');
   document.getElementById(`edit-${id}`).classList.add('hidden');
+  document.getElementById(`posText-${id}`).classList.remove('hidden');
+  document.getElementById(`posEdit-${id}`).classList.add('hidden');
+  document.getElementById(`editBtn-${id}`).style.display = 'inline';
   document.getElementById(`save-${id}`).style.display = 'none';
   document.getElementById(`cancel-${id}`).style.display = 'none';
 }
