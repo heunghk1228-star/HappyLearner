@@ -19,13 +19,12 @@
   <!-- Header -->
   <header class="header">
     <div class="header-inner">
-      <div class="logo">📚 Happy Learner</div>
+      <div class="logo" onclick="navigateTo('about', true)" style="cursor:pointer">📚 Happy Learner</div>
       <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
       
       <nav class="nav" id="mainNav">
-        <a href="#" class="nav-link active" data-page="about" data-i18n="nav.about">關於我們</a>
         <a href="#" class="nav-link" data-page="chinese" data-i18n="nav.chinese">中文</a>
-        <a href="#" class="nav-link" data-page="english" data-i18n="nav.english">英文</a>
+        <a href="#" class="nav-link active" data-page="english" data-i18n="nav.english">英文</a>
         <a href="#" class="nav-link" data-page="math" data-i18n="nav.math">數學</a>
         <a href="#" class="nav-link" data-page="science" data-i18n="nav.science">科學</a>
         <a href="#" class="nav-link" data-page="humanities" data-i18n="nav.humanities">人文</a>
