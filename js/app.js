@@ -761,7 +761,9 @@ document.addEventListener('DOMContentLoaded', () => {
       setLanguage(lang);
       document.getElementById('langBtnMain').textContent = btn.textContent + ' ▾';
       document.getElementById('langDropdown').classList.add('hidden');
-      const page = getCurrentPageFromHash();
+      // Get current page from active nav link
+      const activeLink = document.querySelector('.nav-link.active');
+      const page = activeLink ? activeLink.dataset.page : 'about';
       navigateTo(page, true);
     });
   });
