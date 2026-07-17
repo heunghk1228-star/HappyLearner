@@ -172,8 +172,9 @@ function renderEnglishPage(container) {
         <h2>${t('english.title')}</h2>
       </div>
       
-      <!-- Dynamic Content Area (includes tool cards on main page) -->
+      <!-- Dynamic Content Area (includes tool cards + streak on main page) -->
       <div id="englishContent">
+        <div id="streakDisplay" class="streak-bar"></div>
         <div class="tool-cards">
           <div class="tool-card" onclick="openVocabularyBook()">
             <div class="tool-icon">📖</div>
@@ -193,6 +194,27 @@ function renderEnglishPage(container) {
         </div>
       </div>
     </div>
+  `;
+  
+  // Load streak display
+  loadStreakDisplay();
+}
+
+async function loadStreakDisplay() {
+  const el = document.getElementById('streakDisplay');
+  if (!el) return;
+  if (!currentUser) { el.classList.add('hidden'); return; }
+  const checkedIn = await getTodayCheckIn();
+  const streak = await getCheckInStreak();
+  el.classList.remove('hidden');
+  el.innerHTML = `
+    <div class="streak-info">
+      🔥 <strong>${t('english.dayStreak')}: ${streak}</strong>
+    </div>
+    ${checkedIn 
+      ? `<div class="checked-in">✅ ${t('english.checkInToday')}</div>`
+      : `<span class="streak-pending">📝 完成溫習測驗即可打卡</span>`
+    }
   `;
 }
 
