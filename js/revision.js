@@ -318,8 +318,7 @@ function submitAnswer() {
   } else {
     resultArea.innerHTML = `
       <div class="result-wrong">
-        ${t('english.wrong')}<br>
-        <strong>${t('english.correct')}: ${correctAnswer}</strong>
+        <strong>正確答案為：${correctAnswer}</strong>
       </div>
     `;
     
