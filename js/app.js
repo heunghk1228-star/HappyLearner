@@ -83,6 +83,10 @@ function getCurrentSubPageFromHash() {
 // ============================================================
 
 function navigateTo(page, pushHash) {
+  // Close mobile menu
+  const nav = document.getElementById('mainNav');
+  if (nav) nav.classList.remove('open');
+  
   // Update URL hash when user navigates (not on hashchange events)
   if (pushHash) {
     window.location.hash = page;
@@ -182,32 +186,29 @@ function renderEnglishPage(container) {
         <p class="subtitle">${t('english.subtitle')}</p>
       </div>
       
-      <!-- Check-in Section -->
-      <div class="checkin-section" id="checkinSection">
-        ${renderCheckIn()}
+      <!-- Dynamic Content Area (includes tool cards + check-in on main page) -->
+      <div id="englishContent">
+        <div class="tool-cards">
+          <div class="tool-card" onclick="openVocabularyBook()">
+            <div class="tool-icon">📖</div>
+            <h3>${t('english.myVocab')}</h3>
+            <p>${t('english.myVocabDesc')}</p>
+          </div>
+          <div class="tool-card" onclick="openFlashcards()">
+            <div class="tool-icon">🃏</div>
+            <h3>${t('english.flashCards')}</h3>
+            <p>${t('english.flashCardsDesc')}</p>
+          </div>
+          <div class="tool-card" onclick="showRevisionPage()">
+            <div class="tool-icon">📝</div>
+            <h3>${t('english.revision')}</h3>
+            <p>${t('english.revisionDesc')}</p>
+          </div>
+        </div>
+        <div class="checkin-section" id="checkinSection">
+          ${renderCheckIn()}
+        </div>
       </div>
-      
-      <!-- Tool Cards -->
-      <div class="tool-cards">
-        <div class="tool-card" onclick="openVocabularyBook()">
-          <div class="tool-icon">📖</div>
-          <h3>${t('english.myVocab')}</h3>
-          <p>${t('english.myVocabDesc')}</p>
-        </div>
-        <div class="tool-card" onclick="openFlashcards()">
-          <div class="tool-icon">🃏</div>
-          <h3>${t('english.flashCards')}</h3>
-          <p>${t('english.flashCardsDesc')}</p>
-        </div>
-        <div class="tool-card" onclick="showRevisionPage()">
-          <div class="tool-icon">📝</div>
-          <h3>${t('english.revision')}</h3>
-          <p>${t('english.revisionDesc')}</p>
-        </div>
-      </div>
-      
-      <!-- Dynamic Content Area -->
-      <div id="englishContent"></div>
     </div>
   `;
   
@@ -705,4 +706,9 @@ function showToast(message) {
 
 function showEnglishPage() {
   navigateTo('english', true);
+}
+
+function toggleMobileMenu() {
+  const nav = document.getElementById('mainNav');
+  if (nav) nav.classList.toggle('open');
 }
