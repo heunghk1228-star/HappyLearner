@@ -171,10 +171,9 @@ function renderEnglishPage(container) {
     <div class="english-page">
       <div class="page-header">
         <h2>${t('english.title')}</h2>
-        <p class="subtitle">${t('english.subtitle')}</p>
       </div>
       
-      <!-- Dynamic Content Area (includes tool cards + check-in on main page) -->
+      <!-- Dynamic Content Area (includes tool cards on main page) -->
       <div id="englishContent">
         <div class="tool-cards">
           <div class="tool-card" onclick="openVocabularyBook()">
@@ -193,58 +192,18 @@ function renderEnglishPage(container) {
             <p>${t('english.revisionDesc')}</p>
           </div>
         </div>
-        <div class="checkin-section" id="checkinSection">
-          ${renderCheckIn()}
-        </div>
       </div>
     </div>
   `;
-  
-  loadCheckInStatus();
-}
-
-async function renderCheckIn() {
-  const checkedIn = await getTodayCheckIn();
-  const streak = await getCheckInStreak();
-  
-  return `
-    <div class="checkin-bar">
-      <div class="streak-info">
-        🔥 <strong>${t('english.dayStreak')}: ${streak}</strong>
-      </div>
-      ${checkedIn 
-        ? `<div class="checked-in">✅ ${t('english.checkInToday')}</div>`
-        : `<button class="btn btn-primary" onclick="doDailyCheckIn()">📅 ${t('english.checkIn')}</button>`
-      }
-    </div>
-  `;
-}
-
-async function loadCheckInStatus() {
-  const section = document.getElementById('checkinSection');
-  if (section) {
-    section.innerHTML = await renderCheckIn();
-  }
-}
-
-async function doDailyCheckIn() {
-  try {
-    await doCheckIn();
-    await loadCheckInStatus();
-    // Add gem for check-in
-    const profile = await getProfile();
-    const currentGems = profile?.gems || 0;
-    await updateGems(currentGems + 1);
-    await loadGemCount();
-    showToast('✅ ' + t('english.checkInToday') + ' +1💎');
-  } catch (e) {
-    showToast('❌ ' + e.message);
-  }
 }
 
 // ============================================================
 // Vocabulary Book Page
 // ============================================================
+
+function showEnglishPage() {
+  navigateTo('english', true);
+}
 
 async function openVocabularyBook() {
   history.replaceState({}, '', '#english/vocab');

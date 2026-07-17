@@ -357,8 +357,10 @@ function finishTest() {
   const area = document.getElementById('revisionArea');
   const earnedGem = correctCount > 5;
   
-  // Auto check-in
-  doCheckIn().catch(() => {});
+  // Auto check-in — only if test has >= 7 questions
+  if (testQuestions.length >= 7) {
+    doCheckIn().catch(() => {});
+  }
   
   if (earnedGem) {
     // Add gem
