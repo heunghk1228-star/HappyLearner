@@ -671,6 +671,32 @@ body {
   margin-top: 1.5rem;
 }
 
+/* POS edit checkboxes */
+.pos-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  background: var(--bg);
+  padding: 0.5rem;
+  border-radius: 8px;
+  max-width: 280px;
+}
+
+.pos-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pos-checkbox input {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
 .guide {
   color: var(--text-light);
   margin-bottom: 1rem;
