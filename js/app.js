@@ -9,18 +9,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   await initSupabase();
   
-  // Set up language selector
-  document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const lang = btn.dataset.lang;
-      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      setLanguage(lang);
-      const page = getCurrentPageFromHash();
-      navigateTo(page, true);
-    });
-  });
-  
   // Set up navigation
   document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', (e) => {
@@ -41,8 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   
   // Load saved language
+  // Load saved language — handled by the lang-opt init below
   const savedLang = localStorage.getItem('lang') || 'zh-TW';
-  document.querySelector(`.lang-btn[data-lang="${savedLang}"]`)?.classList.add('active');
   setLanguage(savedLang);
   
   // Hash-based routing
@@ -711,4 +699,142 @@ function showEnglishPage() {
 function toggleMobileMenu() {
   const nav = document.getElementById('mainNav');
   if (nav) nav.classList.toggle('open');
+}
+
+// ============================================================
+// Dropdown Toggles
+// ============================================================
+
+function toggleLangDropdown() {
+  document.getElementById('langDropdown').classList.toggle('hidden');
+  document.getElementById('userDropdown').classList.add('hidden');
+}
+
+function toggleUserDropdown() {
+  document.getElementById('userDropdown').classList.toggle('hidden');
+  document.getElementById('langDropdown').classList.add('hidden');
+}
+
+async function handleLogout() {
+  document.getElementById('userDropdown').classList.add('hidden');
+  await logout();
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.lang-selector-simple')) {
+    document.getElementById('langDropdown')?.classList.add('hidden');
+  }
+  if (!e.target.closest('.user-info')) {
+    document.getElementById('userDropdown')?.classList.add('hidden');
+  }
+});
+
+// ============================================================
+// Language Selector (simplified)
+// ============================================================
+
+// Override lang-btn click handlers for the new simplified design
+document.addEventListener('DOMContentLoaded', () => {
+  // Re-init lang selector — use lang-opt buttons instead of old lang-btn
+  document.querySelectorAll('.lang-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lang = btn.dataset.lang;
+      document.querySelectorAll('.lang-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      setLanguage(lang);
+      document.getElementById('langBtnMain').textContent = btn.textContent + ' ▾';
+      document.getElementById('langDropdown').classList.add('hidden');
+      const page = getCurrentPageFromHash();
+      navigateTo(page, true);
+    });
+  });
+  // Restore saved language
+  const saved = localStorage.getItem('lang') || 'zh-TW';
+  const activeOpt = document.querySelector(`.lang-opt[data-lang="${saved}"]`);
+  if (activeOpt) {
+    activeOpt.classList.add('active');
+    document.getElementById('langBtnMain').textContent = activeOpt.textContent + ' ▾';
+  }
+});
+
+// ============================================================
+// Account Settings Page
+// ============================================================
+
+async function openAccountSettings() {
+  document.getElementById('userDropdown').classList.add('hidden');
+  navigateTo('english', true);
+  showLoading();
+  const profile = await getProfile();
+  
+  const content = document.getElementById('englishContent');
+  content.innerHTML = `
+    <div class="settings-page">
+      <h3>⚙️ 帳戶設定</h3>
+      
+      <div class="settings-section">
+        <label>顯示名稱</label>
+        <input type="text" class="input" id="settingName" value="${profile?.display_name || ''}" placeholder="你的名稱">
+      </div>
+      
+      <div class="settings-section">
+        <label>頭像</label>
+        <div class="avatar-grid" id="avatarGrid">
+          ${Object.entries(AVATARS).map(([key, emoji]) => `
+            <div class="avatar-opt ${profile?.avatar_style === key ? 'selected' : ''}" 
+                 data-avatar="${key}" onclick="selectAvatar('${key}')">${emoji}</div>
+          `).join('')}
+        </div>
+        <div class="avatar-upload">
+          <label>或貼上自訂頭像 URL</label>
+          <input type="url" class="input" id="settingAvatarUrl" value="${profile?.avatar_url || ''}" placeholder="https://...">
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <label>聯絡電話</label>
+        <input type="tel" class="input" id="settingPhone" value="${profile?.contact_phone || ''}" placeholder="+852 1234 5678">
+      </div>
+      
+      <div class="settings-section">
+        <label>備用電郵</label>
+        <input type="email" class="input" id="settingContactEmail" value="${profile?.contact_email || ''}" placeholder="backup@email.com">
+      </div>
+      
+      <div class="settings-actions">
+        <button class="btn btn-primary" onclick="saveAccountSettings()">💾 儲存</button>
+        <button class="btn btn-outline" onclick="showEnglishPage()">← 返回</button>
+      </div>
+      <div id="settingsResult"></div>
+    </div>
+  `;
+  hideLoading();
+}
+
+let selectedAvatar = null;
+
+function selectAvatar(key) {
+  selectedAvatar = key;
+  document.querySelectorAll('.avatar-opt').forEach(el => el.classList.remove('selected'));
+  document.querySelector(`.avatar-opt[data-avatar="${key}"]`).classList.add('selected');
+}
+
+async function saveAccountSettings() {
+  const fields = {
+    display_name: document.getElementById('settingName').value.trim(),
+    avatar_style: selectedAvatar || document.querySelector('.avatar-opt.selected')?.dataset.avatar || 'cat',
+    contact_phone: document.getElementById('settingPhone').value.trim(),
+    contact_email: document.getElementById('settingContactEmail').value.trim(),
+  };
+  const avatarUrl = document.getElementById('settingAvatarUrl').value.trim();
+  if (avatarUrl) fields.avatar_url = avatarUrl;
+  
+  try {
+    await updateProfile(fields);
+    updateAuthUI();
+    document.getElementById('settingsResult').innerHTML = '<div class="result-success">✅ 已儲存！</div>';
+  } catch (e) {
+    document.getElementById('settingsResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
+  }
 }
