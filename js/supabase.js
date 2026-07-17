@@ -111,9 +111,29 @@ async function updateGems(newCount) {
     .eq('id', currentUser.id);
 }
 
+async function updateProfile(fields) {
+  if (!currentUser) return;
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update(fields)
+    .eq('id', currentUser.id);
+  if (error) throw error;
+}
+
+const AVATARS = {
+  cat: '🐱', dog: '🐶', rabbit: '🐰', bear: '🐻', panda: '🐼',
+  fox: '🦊', lion: '🦁', tiger: '🐯', monkey: '🐵', pig: '🐷',
+  frog: '🐸', owl: '🦉', penguin: '🐧', koala: '🐨', hamster: '🐹'
+};
+
+function getAvatarEmoji(style) {
+  return AVATARS[style] || '🐱';
+}
+
 function updateAuthUI() {
   const loginBtn = document.getElementById('loginBtn');
   const userInfo = document.getElementById('userInfo');
+  const userAvatar = document.getElementById('userAvatar');
   const userName = document.getElementById('userName');
   
   if (!loginBtn) return;
@@ -121,7 +141,12 @@ function updateAuthUI() {
   if (currentUser) {
     loginBtn.classList.add('hidden');
     userInfo.classList.remove('hidden');
-    userName.textContent = currentUser.email.split('@')[0];
+    getProfile().then(p => {
+      const avatar = getAvatarEmoji(p?.avatar_style);
+      const name = p?.display_name || currentUser.email.split('@')[0];
+      if (userAvatar) userAvatar.textContent = avatar;
+      if (userName) userName.textContent = name;
+    });
     loadGemCount();
   } else {
     loginBtn.classList.remove('hidden');

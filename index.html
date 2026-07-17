@@ -32,18 +32,29 @@
       </nav>
       
       <div class="header-right">
-        <div class="lang-selector">
-          <button class="lang-btn" data-lang="zh-TW">繁</button>
-          <button class="lang-btn" data-lang="zh-CN">简</button>
-          <button class="lang-btn" data-lang="en">EN</button>
+        <div class="lang-selector-simple">
+          <button class="lang-btn-main" id="langBtnMain" onclick="toggleLangDropdown()">繁 ▾</button>
+          <div class="lang-dropdown hidden" id="langDropdown">
+            <button class="lang-opt" data-lang="zh-TW">繁</button>
+            <button class="lang-opt" data-lang="zh-CN">简</button>
+            <button class="lang-opt" data-lang="en">EN</button>
+          </div>
         </div>
         
         <div class="user-area">
           <span class="gem-display" id="gemDisplay">💎 <span id="gemCount">0</span></span>
           <button class="btn-login" id="loginBtn" data-i18n="english.login">登入</button>
           <div class="user-info hidden" id="userInfo">
-            <span class="user-name" id="userName"></span>
-            <button class="btn-logout" id="logoutBtn" data-i18n="english.logout">登出</button>
+            <div class="user-trigger" onclick="toggleUserDropdown()">
+              <span class="user-avatar" id="userAvatar">🐱</span>
+              <span class="user-name" id="userName"></span>
+              <span class="dropdown-arrow">▾</span>
+            </div>
+            <div class="user-dropdown hidden" id="userDropdown">
+              <button class="dropdown-item" onclick="openAccountSettings()">⚙️ 帳戶設定</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" onclick="handleLogout()">🚪 登出</button>
+            </div>
           </div>
         </div>
       </div>

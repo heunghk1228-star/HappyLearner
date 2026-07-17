@@ -418,37 +418,30 @@ function playClapSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const now = ctx.currentTime;
-    
-    // Noise burst (clap core)
-    const bufferSize = ctx.sampleRate * 0.15;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.3, now);
+    g.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+    g.connect(ctx.destination);
+
+    // Cute "yay!" — two rising notes
+    const notes = [
+      { freq: 523, start: 0, dur: 0.25 },  // C5
+      { freq: 659, start: 0.12, dur: 0.25 }, // E5
+      { freq: 784, start: 0.25, dur: 0.4 },  // G5 — longer
+    ];
+    for (const n of notes) {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(n.freq, now + n.start);
+      const ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.01, now + n.start);
+      ng.gain.linearRampToValueAtTime(0.4, now + n.start + 0.05);
+      ng.gain.exponentialRampToValueAtTime(0.01, now + n.start + n.dur);
+      o.connect(ng);
+      ng.connect(g);
+      o.start(now + n.start);
+      o.stop(now + n.start + n.dur + 0.05);
     }
-    const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    
-    // Bandpass filter to shape the clap
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = 2000;
-    filter.Q.value = 0.5;
-    
-    // Envelope
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.6, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-    
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    noise.start(now);
-    noise.stop(now + 0.15);
-    
-    // Auto-close after sound
-    setTimeout(() => ctx.close(), 500);
-  } catch (e) {
-    // Silently fail if audio not supported
-  }
+    setTimeout(() => ctx.close(), 1000);
+  } catch (e) { /* silent fail */ }
 }

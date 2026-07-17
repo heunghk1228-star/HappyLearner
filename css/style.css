@@ -111,6 +111,59 @@ body {
   padding: 2px;
 }
 
+/* Simplified language selector */
+.lang-selector-simple {
+  position: relative;
+}
+
+.lang-btn-main {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.lang-btn-main:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.lang-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 200;
+  min-width: 80px;
+}
+
+.lang-opt {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.lang-opt:hover {
+  background: var(--bg);
+  color: var(--primary);
+}
+
 .lang-btn {
   border: none;
   background: transparent;
@@ -158,23 +211,76 @@ body {
 }
 
 .user-info {
+  position: relative;
+  font-size: 0.85rem;
+}
+
+.user-trigger {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+  gap: 0.4rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.user-trigger:hover {
+  background: var(--bg);
+}
+
+.user-avatar {
+  font-size: 1.3rem;
+  line-height: 1;
 }
 
 .user-name {
   font-weight: 600;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.btn-logout {
-  border: none;
-  background: transparent;
+.dropdown-arrow {
+  font-size: 0.7rem;
   color: var(--text-light);
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 200;
+  min-width: 160px;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  border: none;
+  background: none;
   cursor: pointer;
-  font-size: 0.8rem;
-  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: var(--bg);
+  color: var(--primary);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
 }
 
 .btn-logout:hover {
