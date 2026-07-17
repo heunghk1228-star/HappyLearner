@@ -305,6 +305,7 @@ function submitAnswer() {
   if (isCorrect) {
     correctCount++;
     resultArea.innerHTML = `<div class="result-correct">${t('english.correct')}</div>`;
+    playClapSound();
     
     // Level up logic (auto mode only, max 1 level per day)
     if (testMode === 'auto' && q.word.level < 6) {
@@ -410,5 +411,44 @@ function shuffleArray(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function playClapSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    
+    // Noise burst (clap core)
+    const bufferSize = ctx.sampleRate * 0.15;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    // Bandpass filter to shape the clap
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 2000;
+    filter.Q.value = 0.5;
+    
+    // Envelope
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.6, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(now);
+    noise.stop(now + 0.15);
+    
+    // Auto-close after sound
+    setTimeout(() => ctx.close(), 500);
+  } catch (e) {
+    // Silently fail if audio not supported
   }
 }
