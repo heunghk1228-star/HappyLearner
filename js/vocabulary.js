@@ -350,6 +350,14 @@ async function updateWordMeaning(wordId, meaning) {
   if (error) throw error;
 }
 
+async function updateWordPOS(wordId, pos) {
+  const { error } = await supabaseClient
+    .from('vocabulary')
+    .update({ part_of_speech: pos })
+    .eq('id', wordId);
+  if (error) throw error;
+}
+
 async function deleteWord(wordId) {
   const { error } = await supabaseClient
     .from('vocabulary')

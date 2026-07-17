@@ -307,6 +307,7 @@ function renderVocabList(words) {
     const posArr = w.part_of_speech ? w.part_of_speech.split(',') : [];
     const posLabels = posArr.map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
     const tierLabel = getTierLabel(w.level);
+    const allPOS = Object.keys(POS_MAP);
     
     return `
       <div class="vocab-row" data-id="${w.id}">
@@ -315,12 +316,22 @@ function renderVocabList(words) {
           <span class="meaning-text" id="meaning-${w.id}">${w.chinese_meaning || ''}</span>
           <input class="input edit-input hidden" id="edit-${w.id}" value="${w.chinese_meaning || ''}">
         </span>
-        <span class="col-pos">${posLabels}</span>
+        <span class="col-pos">
+          <span class="pos-text" id="posText-${w.id}">${posLabels}</span>
+          <div class="pos-edit hidden" id="posEdit-${w.id}">
+            ${allPOS.map(p => `
+              <label class="pos-checkbox">
+                <input type="checkbox" value="${p}" ${posArr.includes(p) ? 'checked' : ''}>
+                ${POS_MAP[p]?.[currentLang] || p}
+              </label>
+            `).join('')}
+          </div>
+        </span>
         <span class="col-level">
           <span class="level-badge level-${w.level}">${tierLabel}</span>
         </span>
         <span class="col-actions">
-          <button class="btn-icon" onclick="editMeaning('${w.id}')" title="${t('english.edit')}">✏️</button>
+          <button class="btn-icon" onclick="editMeaning('${w.id}')" id="editBtn-${w.id}" title="${t('english.edit')}">✏️</button>
           <button class="btn-icon" onclick="saveMeaning('${w.id}')" id="save-${w.id}" style="display:none" title="${t('english.save')}">💾</button>
           <button class="btn-icon" onclick="cancelEdit('${w.id}')" id="cancel-${w.id}" style="display:none" title="${t('english.cancel')}">❌</button>
           <button class="btn-icon" onclick="deleteVocabWord('${w.id}')" title="${t('english.delete')}">🗑️</button>
@@ -333,6 +344,9 @@ function renderVocabList(words) {
 function editMeaning(id) {
   document.getElementById(`meaning-${id}`).classList.add('hidden');
   document.getElementById(`edit-${id}`).classList.remove('hidden');
+  document.getElementById(`posText-${id}`).classList.add('hidden');
+  document.getElementById(`posEdit-${id}`).classList.remove('hidden');
+  document.getElementById(`editBtn-${id}`).style.display = 'none';
   document.getElementById(`save-${id}`).style.display = 'inline';
   document.getElementById(`cancel-${id}`).style.display = 'inline';
   document.getElementById(`edit-${id}`).focus();
@@ -341,14 +355,13 @@ function editMeaning(id) {
 async function saveMeaning(id) {
   const input = document.getElementById(`edit-${id}`);
   const newMeaning = input.value.trim();
+  const posChecks = document.querySelectorAll(`#posEdit-${id} input:checked`);
+  const newPOS = Array.from(posChecks).map(cb => cb.value).join(',');
   try {
     await updateWordMeaning(id, newMeaning);
-    document.getElementById(`meaning-${id}`).textContent = newMeaning;
-    document.getElementById(`meaning-${id}`).classList.remove('hidden');
-    input.classList.add('hidden');
-    document.getElementById(`save-${id}`).style.display = 'none';
-    document.getElementById(`cancel-${id}`).style.display = 'none';
-    showToast('✅ ' + t('english.save'));
+    await updateWordPOS(id, newPOS || 'noun');
+    openVocabularyBook();
+    showToast('✅ 已儲存');
   } catch (e) {
     showToast('❌ ' + e.message);
   }
