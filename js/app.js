@@ -156,7 +156,6 @@ function renderEnglishPage(container) {
       <div class="english-page">
         <div class="page-header">
           <h2>${t('english.title')}</h2>
-          <p class="subtitle">${t('english.subtitle')}</p>
         </div>
         <div class="login-prompt">
           <p>🔒 ${t('english.loginRequired')}</p>
