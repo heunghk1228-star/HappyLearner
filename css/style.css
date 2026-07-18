@@ -1570,6 +1570,13 @@ body {
     font-size: 0.9rem;
   }
   
+  /* Fix dropdowns overflowing off-screen on narrow mobile (e.g. Samsung Internet) */
+  .lang-dropdown,
+  .user-dropdown {
+    right: auto;
+    left: 0;
+  }
+  
   .vocab-list-header, .vocab-row {
     grid-template-columns: 1.5fr 1.5fr 1fr 1fr 0.5fr;
     font-size: 0.8rem;
