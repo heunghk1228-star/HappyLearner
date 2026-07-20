@@ -569,28 +569,12 @@ function showAddWordsPage() {
   
   content.innerHTML = `
     <div class="add-words-page">
-      <h3>${t('english.inputWords')}</h3>
-      
-      <div class="input-mode-tabs">
-        <button class="input-mode-tab active" data-mode="manual" onclick="switchInputMode('manual')">✏️ 手動輸入</button>
-        <button class="input-mode-tab" data-mode="article" onclick="switchInputMode('article')">📄 文章輸入</button>
-      </div>
-      
-      <div id="manualInputArea">
-        <p class="guide">輸入詞彙，以逗號或空格分隔</p>
-        <textarea class="input textarea-input" id="manualWordInput" rows="6" 
-                  placeholder="apple, banana, cat, dog, elephant"></textarea>
-        <div class="word-count" id="manualWordCount">0 words</div>
-        <button class="btn btn-primary" onclick="processManualInput()">${t('english.submit')}</button>
-      </div>
-      
-      <div id="articleInputArea" class="hidden">
-        <p class="guide">${t('english.inputGuide')}</p>
-        <textarea class="input textarea-input" id="articleWordInput" rows="8" 
-                  placeholder="Peter has ten toes. He doesn't like apples."></textarea>
-        <div class="word-count" id="articleWordCount">0 words</div>
-        <button class="btn btn-primary" onclick="processArticleInput()">📄 ${t('english.submit')}</button>
-      </div>
+      <h3>✏️ 輸入詞彙</h3>
+      <p class="guide">輸入詞彙，以逗號、空格或換行分隔（會自動忽略標點符號如 full stop）</p>
+      <textarea class="input textarea-input" id="manualWordInput" rows="6" 
+                placeholder="apple, banana, cat, dog, elephant&#10;Chinese, English, Peter"></textarea>
+      <div class="word-count" id="manualWordCount">0 words</div>
+      <button class="btn btn-primary" onclick="processManualInput()">${t('english.submit')}</button>
       
       <div id="addResult" class="add-result"></div>
       <button class="btn btn-outline" onclick="openVocabularyBook()" style="margin-top: 1rem;">
@@ -599,48 +583,33 @@ function showAddWordsPage() {
     </div>
   `;
   
-  // Word count for manual input
   document.getElementById('manualWordInput').addEventListener('input', function() {
     const words = this.value.trim().split(/[,\s\n]+/).filter(w => w.trim().length > 0);
     document.getElementById('manualWordCount').textContent = `${words.length} words`;
   });
-  
-  // Word count for article input
-  document.getElementById('articleWordInput').addEventListener('input', function() {
-    const words = this.value.trim().split(/[,\s\n]+/).filter(w => w.trim().length > 0);
-    document.getElementById('articleWordCount').textContent = `${words.length} words`;
-  });
 }
 
-function switchInputMode(mode) {
-  document.querySelectorAll('.input-mode-tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.input-mode-tab[data-mode="${mode}"]`).classList.add('active');
-  document.getElementById('manualInputArea').classList.toggle('hidden', mode !== 'manual');
-  document.getElementById('articleInputArea').classList.toggle('hidden', mode !== 'article');
-}
-
-// Manual input: simple word split, no AI processing
+// Manual input: split words, classify, AI translate, show review page
 async function processManualInput() {
   const text = document.getElementById('manualWordInput').value.trim();
   if (!text) return;
   
   showLoading();
   try {
-    // Split by comma, space, or newline
-    const raw = text.split(/[,\s\n]+/).filter(w => w.trim().length > 0);
+    // Split by comma, space, or newline; strip punctuation like full stops
+    const raw = text.split(/[,\s\n]+/).map(w => w.replace(/[^a-zA-Z]/g, '')).filter(w => w.length > 1);
     if (!raw.length) { hideLoading(); return; }
     
-    // Extract words preserving original casing
+    // Dedup preserving original casing
     const seen = new Set();
-    const unique = [];
-    const originalMap = {};
+    const unique = [];      // lowercase keys
+    const originalMap = {}; // lowercase -> original casing
     for (const w of raw) {
-      const lower = w.toLowerCase().replace(/[^a-zA-Z]/g, '');
-      if (lower.length > 1 && !seen.has(lower)) {
+      const lower = w.toLowerCase();
+      if (!seen.has(lower)) {
         seen.add(lower);
-        // Preserve original casing (e.g. country names stay capitalized)
         unique.push(lower);
-        originalMap[lower] = w.replace(/[^a-zA-Z]/g, ''); // Keep original case
+        originalMap[lower] = w; // Keep original casing for display
       }
     }
     if (!unique.length) {
@@ -649,27 +618,50 @@ async function processManualInput() {
       return;
     }
     
-    // Build word objects directly — no AI (preserve original casing)
-    const words = unique.map(w => ({
-      original: w, word: originalMap[w] || w, meaning: '',
-      pos: detectPOS(w).join(','),
-      status: 'new', existingId: null, existingData: null,
-      tagIds: [], editing: false
-    }));
-    
-    // Check duplicates against existing vocabulary (use lowercase for lookup)
+    // Fetch existing vocabulary for duplicate check
     const allWords = await fetchVocabulary();
     const existingMap = {};
     for (const v of allWords) {
       existingMap[v.word.toLowerCase()] = v;
     }
-    for (const w of words) {
-      const existing = existingMap[w.word.toLowerCase()];
+    
+    // Classify each word
+    const words = [];
+    for (const lower of unique) {
+      const orig = originalMap[lower];
+      const existing = existingMap[lower];
+      let status = 'new';
       if (existing) {
-        w.status = 'duplicate';
-        w.existingId = existing.id;
-        w.existingData = existing;
-        w.meaning = existing.chinese_meaning || '';
+        status = 'duplicate';
+      } else if (isLikelyName(lower)) {
+        status = 'name';
+      } else if (!isLikelyValidWord(lower)) {
+        status = 'error';
+      }
+      words.push({
+        word: orig,       // preserve original casing
+        lower: lower,     // lowercase for lookups
+        meaning: existing ? (existing.chinese_meaning || '') : '',
+        pos: existing ? (existing.part_of_speech || detectPOS(lower).join(',')) : detectPOS(lower).join(','),
+        status: status,
+        existingId: existing ? existing.id : null,
+        tagIds: [],
+        tagId: ''  // per-word tag selection
+      });
+    }
+    
+    // AI translate new words (status 'new' without meaning)
+    const needMeaning = words.filter(w => w.status === 'new' && !w.meaning);
+    if (needMeaning.length > 0) {
+      try {
+        const aiWords = needMeaning.map(w => ({ normalized: w.lower, meaning: '' }));
+        await callAIBatchMeanings(aiWords);
+        for (const w of needMeaning) {
+          const match = aiWords.find(a => a.normalized === w.lower);
+          if (match && match.meaning) w.meaning = match.meaning;
+        }
+      } catch (e) {
+        console.warn('AI translation failed:', e);
       }
     }
     
@@ -840,68 +832,88 @@ async function classifyAndPrepareWords(wordTexts) {
 }
 
 // ============================================================
-// Word Review Page (Confirmation with 3 columns)
+// Word Review Page — Success / Names / Errors sections
 // ============================================================
 
-let reviewData = { words: [], selectedTagId: null };
+let reviewData = { words: [], selectedTagId: null, allTags: [] };
 
 function showWordReviewPage(words) {
   reviewData.words = words;
   reviewData.selectedTagId = null;
-  
+
   const content = document.getElementById('englishContent');
   if (!content) return;
-  
+
+  // Load tags for per-word selectors
+  fetchTags().then(tags => { reviewData.allTags = tags; });
+
+  const success = words.filter(w => w.status === 'new' || w.status === 'duplicate');
+  const names = words.filter(w => w.status === 'name');
+  const errors = words.filter(w => w.status === 'error');
+
   content.innerHTML = `
     <div class="review-page">
       <h3>✏️ ${t('english.reviewWords')}</h3>
       
-      <div class="review-tag-bar">
-        <span class="review-tag-label">🏷️ ${t('english.tag')}:</span>
-        <select class="input review-tag-select" id="reviewTagSelect" onchange="onReviewTagChange(this.value)">
-          <option value="">— ${t('english.noTag')} —</option>
-        </select>
-        <button class="btn btn-sm btn-outline" onclick="showNewReviewTagInput()">+ ${t('english.newTag')}</button>
-        <div class="review-new-tag hidden" id="reviewNewTag">
-          <input type="text" class="input" id="reviewTagName" placeholder="${t('english.tagName')}" maxlength="20" style="width:120px">
-          <button class="btn btn-sm btn-primary" onclick="createReviewTag()">${t('english.add')}</button>
+      <div class="review-sections">
+        <div class="review-section review-section-success">
+          <div class="review-section-header">✅ 成功輸入 (${success.length})</div>
+          <div class="review-section-body" id="reviewSuccessList">
+            ${success.length ? success.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('') : '<div class="review-col-empty">沒有詞彙</div>'}
+          </div>
+        </div>
+
+        <div class="review-section review-section-name">
+          <div class="review-section-header">👤 人名/地名 (${names.length})</div>
+          <div class="review-section-body" id="reviewNameList">
+            ${names.length ? names.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('') : '<div class="review-col-empty">沒有詞彙</div>'}
+          </div>
+        </div>
+
+        <div class="review-section review-section-error">
+          <div class="review-section-header">❌ 錯誤輸入 (${errors.length})</div>
+          <div class="review-section-body" id="reviewErrorList">
+            ${errors.length ? errors.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('') : '<div class="review-col-empty">沒有詞彙</div>'}
+          </div>
         </div>
       </div>
-      
-      <div class="review-word-list" id="reviewWordList"></div>
-      
+
       <div class="review-actions" style="margin-top:1rem">
-        <button class="btn btn-primary" onclick="completeReview()">✅ ${t('english.complete')} (${words.length})</button>
+        <button class="btn btn-primary" onclick="completeReview()">✅ ${t('english.complete')} (${success.length + names.length})</button>
       </div>
     </div>
   `;
-  
-  renderReviewWordList();
-  loadReviewTagOptions();
 }
 
-function renderReviewWordList() {
-  const list = document.getElementById('reviewWordList');
-  if (!list || !reviewData.words) return;
-  
-  list.innerHTML = reviewData.words.map((w, idx) => {
-    const posLabels = w.pos ? w.pos.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ') : '';
-    const statusIcon = w.status === 'duplicate' ? '⏭️' : w.status === 'error' ? '❌' : w.status === 'name' ? '👤' : '✅';
-    return `
-      <div class="review-word-row" data-idx="${idx}">
-        <div class="review-word-info">
-          <span class="review-word-status">${statusIcon}</span>
-          <span class="review-word-word"><strong>${w.word}</strong></span>
-          <span class="review-word-meaning">📖 ${w.meaning || '—'}</span>
-          <span class="review-word-pos">🔤 ${posLabels}</span>
-        </div>
-        <div class="review-word-row-actions">
-          <button class="btn-icon" onclick="editReviewWord(${idx})" title="✏️">✏️</button>
-          <button class="btn-icon" onclick="deleteReviewWord(${idx})" title="🗑️">🗑️</button>
-        </div>
+function renderReviewWordRow(w, idx) {
+  const posLabels = w.pos ? w.pos.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ') : '';
+  const tagOptions = reviewData.allTags.map(t =>
+    `<option value="${t.id}" ${w.tagId === t.id ? 'selected' : ''}>${t.name}</option>`
+  ).join('');
+
+  return `
+    <div class="review-word-row" data-idx="${idx}">
+      <div class="review-word-info">
+        <span class="review-word-word"><strong>${w.word}</strong></span>
+        <span class="review-word-meaning">📖 ${w.meaning || '—'}</span>
+        <span class="review-word-pos">🔤 ${posLabels}</span>
+        <select class="input review-word-tag-select" onchange="onReviewWordTagChange(${idx}, this.value)" style="max-width:110px;font-size:0.8rem">
+          <option value="">🏷️ —</option>
+          ${tagOptions}
+        </select>
       </div>
-    `;
-  }).join('');
+      <div class="review-word-row-actions">
+        <button class="btn-icon" onclick="editReviewWord(${idx})" title="✏️">✏️</button>
+        <button class="btn-icon" onclick="deleteReviewWord(${idx})" title="🗑️">🗑️</button>
+        ${w.status === 'error' ? `<button class="btn-icon" onclick="fixReviewWord(${idx})" title="🔧 修正">🔧</button>` : ''}
+        ${w.status === 'name' ? `<button class="btn-icon" onclick="keepReviewWord(${idx})" title="✅ 保留">✅</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function onReviewWordTagChange(idx, tagId) {
+  if (reviewData.words[idx]) reviewData.words[idx].tagId = tagId;
 }
 
 function editReviewWord(idx) {
@@ -909,22 +921,45 @@ function editReviewWord(idx) {
   const newWord = prompt('修改英文詞彙:', w.word);
   if (newWord && newWord.trim()) {
     w.word = newWord.trim().toLowerCase();
+    w.lower = w.word;
     const newMeaning = prompt('修改中文意思:', w.meaning || '');
     if (newMeaning !== null) w.meaning = newMeaning.trim();
-    renderReviewWordList();
+    refreshReviewPage();
   }
 }
 
 function deleteReviewWord(idx) {
   reviewData.words.splice(idx, 1);
-  // Update the complete button count
-  const btn = document.querySelector('.review-actions .btn-primary');
-  if (btn) btn.textContent = `✅ ${t('english.complete')} (${reviewData.words.length})`;
-  if (reviewData.words.length === 0) {
-    document.getElementById('reviewWordList').innerHTML = '<div class="review-col-empty">沒有詞彙</div>';
-    return;
+  refreshReviewPage();
+}
+
+function fixReviewWord(idx) {
+  const w = reviewData.words[idx];
+  const newWord = prompt('修正英文詞彙:', w.word);
+  if (!newWord || !newWord.trim()) return;
+  const lower = newWord.trim().toLowerCase();
+  // Re-classify: if it looks valid, move to 'new'; otherwise keep as 'error'
+  w.word = newWord.trim();
+  w.lower = lower;
+  if (isLikelyValidWord(lower) && !isLikelyName(lower)) {
+    w.status = 'new';
+    w.meaning = ''; // Will get AI translation on complete
+  } else if (isLikelyName(lower)) {
+    w.status = 'name';
   }
-  renderReviewWordList();
+  refreshReviewPage();
+}
+
+function keepReviewWord(idx) {
+  const w = reviewData.words[idx];
+  w.status = 'new';  // Move name to success list
+  refreshReviewPage();
+}
+
+function refreshReviewPage() {
+  // Re-render the page by re-splitting into sections
+  // Just call showWordReviewPage with current data
+  showWordReviewPage(reviewData.words);
 }
 
 async function completeReview() {
@@ -977,7 +1012,7 @@ async function completeReview() {
       }
     }
     
-    // Add new words + name words (user decides by deleting from review)
+    // Add new words + name words (user decided to keep)
     const allNew = [...newWords, ...nameWords];
     let addResult = { added: 0, duplicates: 0 };
     if (allNew.length > 0) {
@@ -986,7 +1021,19 @@ async function completeReview() {
         pos: w.pos || detectPOS(w.word).join(','),
         meaning: w.meaning || ''
       }));
-      addResult = await bulkAddWords(wordObjs, reviewData.selectedTagId);
+      addResult = await bulkAddWords(wordObjs, null); // Don't use global tag — per-word tags handled below
+      
+      // Assign per-word tags
+      if (addResult.addedIds && addResult.addedIds.length > 0) {
+        for (let i = 0; i < allNew.length; i++) {
+          const tagId = allNew[i].tagId;
+          if (tagId && addResult.addedIds[i]) {
+            try {
+              await addTagToWord(addResult.addedIds[i], tagId);
+            } catch(e) { console.warn('Tag assign failed:', e); }
+          }
+        }
+      }
     }
     
     const parts = [];
