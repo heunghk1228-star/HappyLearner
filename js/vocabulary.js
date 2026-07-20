@@ -234,6 +234,172 @@ function detectPOS(word) {
 // Database operations
 // ============================================================
 
+// ============================================================
+// Helper: English word validation (for error detection)
+// ============================================================
+
+// Minimal common English word set for basic validation
+const COMMON_ENGLISH_WORDS = new Set([
+  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you',
+  'do','at','this','but','his','by','from','they','we','say','her','she','or','an','will','my','one',
+  'all','would','there','their','what','so','up','out','if','about','who','get','which','go','me',
+  'when','make','can','like','time','no','just','him','know','take','people','into','year','your',
+  'good','some','could','them','see','other','than','then','now','look','only','come','its','over',
+  'think','also','back','after','use','two','how','our','work','first','well','way','even','new',
+  'want','because','any','these','give','day','most','us','great','between','need','large','often',
+  'hand','high','place','small','under','long','get','live','where','much','should','own','old',
+  'too','mean','keep','let','begin','world','run','move','life','night','right','school','still',
+  'study','learn','plan','note','page','form','play','turn','cause','change','follow','set','ask',
+  'show','hear','try','group','number','open','close','letter','word','line','end','land','air',
+  'home','hand','picture','animal','house','point','page','letter','mother','father','family',
+  'child','eye','head','foot','hand','body','water','food','room','door','window','book','paper',
+  'car','city','tree','sea','star','sun','moon','earth','light','dark','hot','cold','hard','soft',
+  'true','love','hate','friend','enemy','war','peace','man','woman','boy','girl','king','queen',
+  'law','god','war','art','beauty','truth','power','force','mind','heart','soul','spirit','time',
+  'life','death','birth','day','week','month','year','hour','minute','second','morning','noon',
+  'evening','night','spring','summer','fall','winter','north','south','east','west','left','right',
+  'front','back','top','bottom','side','end','start','begin','finish','stop','go','come','arrive',
+  'leave','stay','sit','stand','lie','rise','fall','grow','become','seem','appear','look','feel',
+  'sound','taste','smell','eat','drink','run','walk','swim','fly','ride','drive','carry','bring',
+  'take','send','receive','give','offer','help','serve','fight','win','lose','play','sing','dance',
+  'read','write','draw','paint','build','break','cut','push','pull','lift','drop','throw','catch',
+  'apple','banana','orange','grape','water','milk','bread','rice','meat','fish','chicken','egg',
+  'cheese','butter','sugar','salt','oil','tea','coffee','juice','cake','cookie','candy','soup',
+  'salad','pizza','pasta','noodle','sandwich','breakfast','lunch','dinner','snack','meal','food',
+  'drink','water','milk','juice','tea','coffee','beer','wine','fruit','vegetable','potato','tomato',
+  'onion','garlic','carrot','bean','pea','corn','wheat','plant','flower','grass','tree','leaf',
+  'root','branch','seed','soil','garden','farm','field','forest','mountain','river','lake','ocean',
+  'sea','beach','island','desert','valley','hill','rock','stone','sand','sky','air','wind','rain',
+  'snow','ice','fire','smoke','cloud','storm','thunder','lightning','earthquake','flood','heat',
+  'cold','warm','cool','dry','wet','clean','dirty','bright','dark','sharp','dull','smooth','rough',
+  'soft','hard','heavy','light','fast','slow','quiet','loud','deep','shallow','wide','narrow',
+  'long','short','tall','big','small','large','tiny','thick','thin','full','empty','old','young',
+  'new','early','late','near','far','high','low','rich','poor','cheap','expensive','easy','hard',
+  'simple','complex','free','busy','safe','dangerous','possible','impossible','correct','wrong',
+  'sure','certain','clear','obvious','strange','normal','special','different','same','similar',
+  'important','necessary','popular','common','rare','beautiful','ugly','pretty','handsome','cute',
+  'lovely','nice','kind','cruel','brave','coward','strong','weak','healthy','sick','tired','awake',
+  'asleep','alive','dead','real','fake','true','false','happy','sad','angry','calm','excited',
+  'bored','tired','scared','brave','shy','proud','wise','foolish','funny','serious','smart','dumb',
+  'polite','rude','generous','selfish','honest','lazy','hardworking','friendly','mean','strict',
+  'patient','curious','creative','careful','careless','responsible','reliable','helpful','useful',
+  'color','red','blue','green','yellow','white','black','brown','pink','purple','orange','gray',
+  'gold','silver','number','zero','one','two','three','four','five','six','seven','eight','nine',
+  'ten','hundred','thousand','million','first','second','third','last','next','previous','final',
+  'english','chinese','math','science','history','music','art','sport','game','team','player',
+  'coach','teacher','student','doctor','nurse','worker','farmer','driver','pilot','soldier','police',
+  'judge','lawyer','banker','artist','writer','singer','actor','dancer','chef','baker','tailor',
+  'carpenter','engineer','scientist','pilot','captain','general','king','queen','prince','princess',
+  'president','governor','senator','mayor','manager','director','leader','member','citizen','neighbor',
+  'guest','host','owner','customer','patient','passenger','audience','crowd','group','team','class',
+  'club','party','family','community','society','nation','country','state','city','town','village',
+  'street','road','highway','bridge','building','house','home','room','door','window','floor','wall',
+  'roof','garden','yard','park','market','shop','store','bank','hospital','school','church','office',
+  'factory','airport','station','hotel','restaurant','theater','museum','library','stadium','gym',
+  'pool','beach','park','zoo','farm','field','forest','mountain','river','lake','ocean','island'
+]);
+
+function isLikelyValidWord(word) {
+  const w = word.toLowerCase().trim();
+  if (w.length < 2) return false;
+  if (!/^[a-zA-Z]+$/.test(w)) return false;
+  
+  // Check common word set
+  if (COMMON_ENGLISH_WORDS.has(w)) return true;
+  if (COMMON_WORDS_POS[w]) return true;
+  if (IRREGULAR_VERBS[w]) return true;
+  
+  // Check suffix patterns
+  for (const suffix of Object.keys(POS_SUFFIXES)) {
+    if (w.endsWith(suffix)) return true;
+  }
+  
+  // At minimum, must have a vowel and be at least 3 chars
+  if (w.length < 3) return false;
+  if (!/[aeiouy]/i.test(w)) return false;
+  
+  return true; // Accept as plausible
+}
+
+// ============================================================
+// Tag operations
+// ============================================================
+
+async function fetchTags() {
+  if (!currentUser) return [];
+  const { data, error } = await supabaseClient
+    .from('tags')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+async function createTag(name, color) {
+  if (!currentUser) throw new Error('Not logged in');
+  const { data, error } = await supabaseClient
+    .from('tags')
+    .insert({ user_id: currentUser.id, name: name.trim(), color: color || '#6366f1' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function deleteTag(tagId) {
+  const { error } = await supabaseClient
+    .from('tags')
+    .delete()
+    .eq('id', tagId);
+  if (error) throw error;
+}
+
+async function addTagToWord(wordId, tagId) {
+  const { error } = await supabaseClient
+    .from('word_tags')
+    .insert({ word_id: wordId, tag_id: tagId });
+  if (error && error.code !== '23505') throw error; // 23505 = already exists
+}
+
+async function removeTagFromWord(wordId, tagId) {
+  const { error } = await supabaseClient
+    .from('word_tags')
+    .delete()
+    .eq('word_id', wordId)
+    .eq('tag_id', tagId);
+  if (error) throw error;
+}
+
+async function fetchWordTags(wordId) {
+  const { data, error } = await supabaseClient
+    .from('word_tags')
+    .select('tag_id, tags(id, name, color)')
+    .eq('word_id', wordId);
+  if (error) throw error;
+  return (data || []).map(wt => wt.tags).filter(Boolean);
+}
+
+async function fetchAllWordTags(wordIds) {
+  if (!wordIds || !wordIds.length) return {};
+  const { data, error } = await supabaseClient
+    .from('word_tags')
+    .select('word_id, tags(id, name, color)')
+    .in('word_id', wordIds);
+  if (error) throw error;
+  const result = {};
+  for (const wt of (data || [])) {
+    if (!wt.tags) continue;
+    if (!result[wt.word_id]) result[wt.word_id] = [];
+    result[wt.word_id].push(wt.tags);
+  }
+  return result;
+}
+
+// ============================================================
+// Vocabulary DB operations
+// ============================================================
+
 async function fetchVocabulary() {
   if (!currentUser) return [];
   const { data, error } = await supabaseClient
@@ -278,10 +444,10 @@ async function addWord(word, chineseMeaning, pos) {
   return { duplicate: false, data };
 }
 
-async function bulkAddWords(words) {
-  if (!currentUser || !words.length) return { added: 0, duplicates: 0 };
+async function bulkAddWords(words, tagId) {
+  if (!currentUser || !words.length) return { added: 0, duplicates: 0, addedIds: [] };
   
-  let added = 0, duplicates = 0;
+  let added = 0, duplicates = 0, addedIds = [];
   const normalizedWords = words.map(w => {
     const norm = normalizeWord(w.word || w);
     const pos = w.pos || detectPOS(norm);
@@ -320,13 +486,24 @@ async function bulkAddWords(words) {
   }
   
   if (toInsert.length > 0) {
-    const { error } = await supabaseClient
+    const { data: inserted, error } = await supabaseClient
       .from('vocabulary')
-      .insert(toInsert);
+      .insert(toInsert)
+      .select('id');
     if (error) throw error;
+    addedIds = (inserted || []).map(r => r.id);
+    
+    // Assign tag to newly added words
+    if (tagId && addedIds.length > 0) {
+      const tagRows = addedIds.map(wid => ({ word_id: wid, tag_id: tagId }));
+      const { error: tagErr } = await supabaseClient
+        .from('word_tags')
+        .insert(tagRows);
+      if (tagErr && tagErr.code !== '23505') console.warn('Tag assignment failed:', tagErr);
+    }
   }
   
-  return { added, duplicates };
+  return { added, duplicates, addedIds };
 }
 
 async function updateWordLevel(wordId, newLevel) {
@@ -354,6 +531,14 @@ async function updateWordPOS(wordId, pos) {
   const { error } = await supabaseClient
     .from('vocabulary')
     .update({ part_of_speech: pos })
+    .eq('id', wordId);
+  if (error) throw error;
+}
+
+async function updateWordEntry(wordId, updates) {
+  const { error } = await supabaseClient
+    .from('vocabulary')
+    .update(updates)
     .eq('id', wordId);
   if (error) throw error;
 }

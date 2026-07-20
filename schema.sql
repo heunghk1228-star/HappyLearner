@@ -46,7 +46,61 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vocabulary ENABLE ROW LEVEL SECURITY;
 ALTER TABLE check_ins ENABLE ROW LEVEL SECURITY;
 
--- 6. RLS Policies — users can only see/modify their own data
+-- 6. Tags table
+CREATE TABLE IF NOT EXISTS tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  color TEXT DEFAULT '#6366f1',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, name)
+);
+
+-- 7. Word-Tags junction table
+CREATE TABLE IF NOT EXISTS word_tags (
+  word_id UUID NOT NULL REFERENCES vocabulary(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (word_id, tag_id)
+);
+
+-- 8. Indexes for tags
+CREATE INDEX IF NOT EXISTS idx_tags_user_id ON tags(user_id);
+CREATE INDEX IF NOT EXISTS idx_word_tags_word_id ON word_tags(word_id);
+CREATE INDEX IF NOT EXISTS idx_word_tags_tag_id ON word_tags(tag_id);
+
+-- 9. RLS for tags
+ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE word_tags ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own tags"
+  ON tags FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own tags"
+  ON tags FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own tags"
+  ON tags FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own tags"
+  ON tags FOR DELETE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own word_tags"
+  ON word_tags FOR SELECT
+  USING (EXISTS (SELECT 1 FROM vocabulary WHERE id = word_id AND user_id = auth.uid()));
+
+CREATE POLICY "Users can insert own word_tags"
+  ON word_tags FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM vocabulary WHERE id = word_id AND user_id = auth.uid()));
+
+CREATE POLICY "Users can delete own word_tags"
+  ON word_tags FOR DELETE
+  USING (EXISTS (SELECT 1 FROM vocabulary WHERE id = word_id AND user_id = auth.uid()));
+
+-- 10. RLS Policies — users can only see/modify their own data
 
 -- Profiles
 CREATE POLICY "Users can view own profile"
