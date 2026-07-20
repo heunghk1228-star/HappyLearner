@@ -63,6 +63,10 @@ async function startRevision(mode) {
   leveledUpWords = [];
   initialQuestionCount = 0;
 
+  // Hide the mode selection cards
+  const modes = document.querySelector('.revision-modes');
+  if (modes) modes.style.display = 'none';
+
   const words = await fetchVocabulary();
   if (!words.length) {
     document.getElementById('revisionArea').innerHTML = `
