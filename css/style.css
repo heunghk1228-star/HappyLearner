@@ -1443,6 +1443,14 @@ body {
   transform: scale(1.2);
 }
 
+.gol-cell {
+  background: #fff;
+}
+
+.gol-cell-alive {
+  background: #22c55e !important;
+}
+
 .retry-notice {
   text-align: center;
   padding: 0.5rem;

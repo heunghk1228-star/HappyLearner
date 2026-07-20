@@ -137,7 +137,7 @@ function navigateTo(page, pushHash) {
         else if (sub === 'revision') showRevisionPage();
       }, 10);
       break;
-    case 'math': renderComingSoonPage(content, 'math'); break;
+    case 'math': renderMathPage(content); break;
     case 'science': renderComingSoonPage(content, 'science'); break;
     case 'humanities': renderComingSoonPage(content, 'humanities'); break;
     default: renderAboutPage(content);
@@ -1343,6 +1343,157 @@ async function handleGoogleSignIn() {
     // OAuth redirects the browser — no further steps needed
   } catch (e) {
     showToast('❌ Google sign in failed: ' + e.message);
+  }
+}
+
+// ============================================================
+// Game of Life (Math page)
+// ============================================================
+
+let golGrid = [];
+let golRunning = false;
+let golTimer = null;
+let golRows = 30;
+let golCols = 50;
+let golSpeed = 200;
+
+function renderMathPage(container) {
+  golRows = 30;
+  golCols = Math.floor((container.clientWidth || 800) / 16);
+  if (golCols < 30) golCols = 30;
+  if (golCols > 80) golCols = 80;
+  
+  // Init grid
+  golGrid = [];
+  for (let r = 0; r < golRows; r++) {
+    golGrid[r] = [];
+    for (let c = 0; c < golCols; c++) {
+      golGrid[r][c] = Math.random() < 0.25 ? 1 : 0;
+    }
+  }
+  golRunning = false;
+  if (golTimer) { clearInterval(golTimer); golTimer = null; }
+  
+  container.innerHTML = `
+    <div class="page-header">
+      <h2>🧬 Conway's Game of Life</h2>
+    </div>
+    <div style="text-align:center">
+      <div class="gol-controls" style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;margin-bottom:0.75rem">
+        <button class="btn btn-primary" id="golPlayBtn" onclick="golToggle()">▶ 開始</button>
+        <button class="btn btn-outline" onclick="golClear()">🗑️ 清空</button>
+        <button class="btn btn-outline" onclick="golRandom()">🎲 隨機</button>
+        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.85rem">
+          ⏱ <input type="range" min="50" max="1000" value="${golSpeed}" step="50" oninput="golSetSpeed(this.value)" style="width:80px">
+        </label>
+      </div>
+      <div class="gol-grid" id="golGrid" style="display:inline-grid;grid-template-columns:repeat(${golCols},14px);gap:1px;background:#ddd;border-radius:4px;padding:2px;user-select:none"></div>
+    </div>
+  `;
+  
+  golRenderGrid();
+}
+
+function golRenderGrid() {
+  const gridEl = document.getElementById('golGrid');
+  if (!gridEl) return;
+  gridEl.innerHTML = '';
+  for (let r = 0; r < golRows; r++) {
+    for (let c = 0; c < golCols; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'gol-cell' + (golGrid[r][c] ? ' gol-cell-alive' : '');
+      cell.style.cssText = 'width:14px;height:14px;border-radius:2px;cursor:pointer;transition:background 0.1s';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      cell.onclick = () => golToggleCell(r, c);
+      gridEl.appendChild(cell);
+    }
+  }
+}
+
+function golToggleCell(r, c) {
+  golGrid[r][c] = golGrid[r][c] ? 0 : 1;
+  const cells = document.getElementById('golGrid')?.children;
+  if (cells) {
+    const idx = r * golCols + c;
+    if (cells[idx]) cells[idx].className = 'gol-cell' + (golGrid[r][c] ? ' gol-cell-alive' : '');
+  }
+}
+
+function golToggle() {
+  golRunning = !golRunning;
+  const btn = document.getElementById('golPlayBtn');
+  if (golRunning) {
+    btn.textContent = '⏸ 暫停';
+    btn.className = 'btn btn-warning';
+    if (golTimer) clearInterval(golTimer);
+    golTimer = setInterval(golStep, golSpeed);
+  } else {
+    btn.textContent = '▶ 開始';
+    btn.className = 'btn btn-primary';
+    if (golTimer) { clearInterval(golTimer); golTimer = null; }
+  }
+}
+
+function golStep() {
+  const rows = golRows, cols = golCols;
+  const next = [];
+  for (let r = 0; r < rows; r++) {
+    next[r] = [];
+    for (let c = 0; c < cols; c++) {
+      // Count live neighbors
+      let live = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = (r + dr + rows) % rows;   // wrap around
+          const nc = (c + dc + cols) % cols;
+          live += golGrid[nr][nc];
+        }
+      }
+      if (golGrid[r][c] === 1) {
+        next[r][c] = (live === 2 || live === 3) ? 1 : 0;
+      } else {
+        next[r][c] = (live === 3) ? 1 : 0;
+      }
+    }
+  }
+  golGrid = next;
+  golUpdateCells();
+}
+
+function golUpdateCells() {
+  const cells = document.getElementById('golGrid')?.children;
+  if (!cells) return;
+  for (let r = 0; r < golRows; r++) {
+    for (let c = 0; c < golCols; c++) {
+      const idx = r * golCols + c;
+      if (cells[idx]) cells[idx].className = 'gol-cell' + (golGrid[r][c] ? ' gol-cell-alive' : '');
+    }
+  }
+}
+
+function golClear() {
+  if (golRunning) golToggle();
+  for (let r = 0; r < golRows; r++)
+    for (let c = 0; c < golCols; c++)
+      golGrid[r][c] = 0;
+  golUpdateCells();
+}
+
+function golRandom() {
+  if (golRunning) golToggle();
+  for (let r = 0; r < golRows; r++)
+    for (let c = 0; c < golCols; c++)
+      golGrid[r][c] = Math.random() < 0.25 ? 1 : 0;
+  golUpdateCells();
+}
+
+function golSetSpeed(ms) {
+  golSpeed = parseInt(ms);
+  if (golRunning) {
+    if (golTimer) clearInterval(golTimer);
+    golTimer = setInterval(golStep, golSpeed);
   }
 }
 
