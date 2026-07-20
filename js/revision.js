@@ -223,7 +223,7 @@ function renderListItems(filtered, totalCount) {
     `;
   }).join('');
 
-  updateSelectionCount();
+  updateSelectionCount(filtered.length);
   const allChecked = document.querySelectorAll('#revisionWordList input:checked').length === filtered.length;
   selectAll.checked = allChecked && filtered.length > 0;
 }
@@ -234,16 +234,16 @@ function onRevisionCheckChange(el, id) {
   } else {
     revisionSelectedIds.delete(id);
   }
-  updateSelectionCount();
+  updateSelectionCount(document.querySelectorAll('#revisionWordList label.selection-item').length);
 }
 
-function updateSelectionCount() {
+function updateSelectionCount(visibleCount) {
   const selected = document.querySelectorAll('#revisionWordList input:checked').length;
   const countEl = document.getElementById('selectedCount');
   const maxEl = document.getElementById('maxCount');
   const qtyInput = document.getElementById('questionCount');
   if (countEl) countEl.textContent = selected;
-  if (maxEl) maxEl.textContent = selected;
+  if (maxEl) maxEl.textContent = visibleCount;
   if (qtyInput) {
     qtyInput.max = selected;
     if (parseInt(qtyInput.value) > selected) qtyInput.value = selected;
