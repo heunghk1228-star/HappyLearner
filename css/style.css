@@ -1920,6 +1920,14 @@ body {
   position: relative;
 }
 
+.review-tag-note {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-style: italic;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
 .inline-tag-create {
   position: absolute;
   top: 100%;

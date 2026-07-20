@@ -496,7 +496,7 @@ function showAddWordsPage() {
       
       <!-- Article mode -->
       <div id="inputModeArticle" class="input-mode-panel hidden">
-        <p class="guide">Paste an article — AI will extract base forms and skip names.</p>
+        <p class="guide">Paste an article — AI will extract base forms.</p>
         <textarea class="input textarea-input" id="wordInputArticle" rows="6" 
                   placeholder="Peter has ten toes. He doesn't like apples."></textarea>
         <div class="word-count" id="wordCountArticle">0 words</div>
@@ -533,7 +533,7 @@ async function processManualInput() {
   const text = document.getElementById('wordInputManual').value.trim();
   if (!text) return;
   
-  const raw = text.split(/[,\s\n]+/).map(w => w.trim().toLowerCase()).filter(w => w.length > 0);
+  const raw = text.split(/[,\s\n]+/).map(w => w.trim().toLowerCase().replace(/[^a-zA-Z]/g, '')).filter(w => w.length > 0);
   const seen = new Set();
   const unique = [];
   for (const w of raw) {
@@ -710,6 +710,7 @@ function showWordReviewPage(words) {
           <input type="text" class="input" id="reviewTagName" placeholder="${t('english.tagName')}" maxlength="20" style="width:120px">
           <button class="btn btn-sm btn-primary" onclick="createReviewTag()">${t('english.add')}</button>
         </div>
+        <span class="review-tag-note">${t('english.tagAllNote')}</span>
       </div>
       
       <div class="review-columns" id="reviewColumns"></div>
