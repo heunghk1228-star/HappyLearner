@@ -435,6 +435,9 @@ async function openFlashcards() {
           <option value="well-tested">${t('english.wellTested')}</option>
           <option value="mastered">${t('english.mastered')}</option>
         </select>
+        <select id="flashcardTagFilter" onchange="filterFlashcards()" class="input" style="max-width:140px;font-size:0.85rem">
+          <option value="">🏷️ ${t('english.all')}</option>
+        </select>
         <div class="speech-controls">
           <div class="speech-speed-control">
             <span class="speed-label">🔊</span>
@@ -454,6 +457,9 @@ async function openFlashcards() {
 
   // Init voices on first load and populate voice selector
   initVoices().then(() => populateVoiceSelector());
+
+  // Load tag filter
+  loadFlashcardTagFilter();
 
   currentFlashcards = words;
   renderFlashcards(words);
@@ -509,7 +515,45 @@ async function regenerateSentence(wordId) {
 }
 
 function filterFlashcards() {
-  const f = document.getElementById('flashcardFilter').value;
-  if (f === 'all') fetchVocabulary().then(renderFlashcards);
-  else getWordsByTier(f).then(renderFlashcards);
+  const tierFilter = document.getElementById('flashcardFilter').value;
+  const tagFilter = document.getElementById('flashcardTagFilter').value;
+
+  // Fetch all words first
+  fetchVocabulary().then(async (allWords) => {
+    let words = allWords;
+
+    // Apply tier filter
+    if (tierFilter !== 'all') {
+      words = await getWordsByTier(tierFilter);
+    }
+
+    // Apply tag filter
+    if (tagFilter) {
+      if (tagFilter === '__untagged') {
+        const wordIds = words.map(w => w.id);
+        const tagMap = await fetchAllWordTags(wordIds);
+        words = words.filter(w => !tagMap[w.id] || tagMap[w.id].length === 0);
+      } else {
+        const { data } = await supabaseClient
+          .from('word_tags')
+          .select('word_id')
+          .eq('tag_id', tagFilter);
+        const taggedIds = new Set((data || []).map(d => d.word_id));
+        words = words.filter(w => taggedIds.has(w.id));
+      }
+    }
+
+    renderFlashcards(words);
+  });
+}
+
+async function loadFlashcardTagFilter() {
+  const select = document.getElementById('flashcardTagFilter');
+  if (!select) return;
+  try {
+    const tags = await fetchTags();
+    select.innerHTML = `<option value="">🏷️ ${t('english.all')}</option>` +
+      tags.map(t => `<option value="${t.id}">${t.name}</option>`).join('') +
+      `<option value="__untagged">🚫 ${t('english.noTag')}</option>`;
+  } catch(e) { console.warn('Flashcard tag filter load failed:', e); }
 }
