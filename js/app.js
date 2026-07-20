@@ -390,31 +390,45 @@ function renderVocabList(words) {
 }
 
 function editMeaning(id) {
-  showToast('✏️ 編輯: ' + id);
-  return; // TEMP: test if button works
-  if (!id) { showToast('❌ 無法取得詞彙 ID'); return; }
-  const wordText = document.getElementById(`wordText-${id}`);
-  if (!wordText) { showToast('❌ 詞彙元素不存在'); return; }
-  wordText.classList.add('hidden');
-  document.getElementById(`editWord-${id}`).classList.remove('hidden');
-  document.getElementById(`meaning-${id}`).classList.add('hidden');
-  document.getElementById(`edit-${id}`).classList.remove('hidden');
-  document.getElementById(`posText-${id}`).classList.add('hidden');
-  document.getElementById(`posEdit-${id}`).classList.remove('hidden');
-  document.getElementById(`editBtn-${id}`).style.display = 'none';
-  document.getElementById(`save-${id}`).style.display = 'inline';
-  document.getElementById(`cancel-${id}`).style.display = 'inline';
-  document.getElementById(`edit-${id}`).focus();
+  try {
+    const el = id => document.getElementById(id);
+    const wordText = el(`wordText-${id}`);
+    const editWord = el(`editWord-${id}`);
+    const meaning = el(`meaning-${id}`);
+    const edit = el(`edit-${id}`);
+    const posText = el(`posText-${id}`);
+    const posEdit = el(`posEdit-${id}`);
+    const editBtn = el(`editBtn-${id}`);
+    const save = el(`save-${id}`);
+    const cancel = el(`cancel-${id}`);
+    if (!wordText || !editWord || !meaning || !edit || !posText || !posEdit || !editBtn || !save || !cancel) {
+      showToast('❌ 編輯錯誤: DOM 元素缺失');
+      return;
+    }
+    wordText.classList.add('hidden');
+    editWord.classList.remove('hidden');
+    meaning.classList.add('hidden');
+    edit.classList.remove('hidden');
+    posText.classList.add('hidden');
+    posEdit.classList.remove('hidden');
+    editBtn.style.display = 'none';
+    save.style.display = 'inline';
+    cancel.style.display = 'inline';
+    edit.focus();
+  } catch(e) {
+    showToast('❌ 編輯錯誤: ' + e.message);
+  }
 }
 
 async function saveMeaning(id) {
-  const wordInput = document.getElementById(`editWord-${id}`);
-  const input = document.getElementById(`edit-${id}`);
-  const newWord = wordInput.value.trim().toLowerCase();
-  const newMeaning = input.value.trim();
-  const posChecks = document.querySelectorAll(`#posEdit-${id} input:checked`);
-  const newPOS = Array.from(posChecks).map(cb => cb.value).join(',');
   try {
+    const wordInput = document.getElementById(`editWord-${id}`);
+    const input = document.getElementById(`edit-${id}`);
+    if (!wordInput || !input) { showToast('❌ 儲存錯誤: 找不到輸入欄位'); return; }
+    const newWord = wordInput.value.trim().toLowerCase();
+    const newMeaning = input.value.trim();
+    const posChecks = document.querySelectorAll(`#posEdit-${id} input:checked`);
+    const newPOS = Array.from(posChecks).map(cb => cb.value).join(',');
     const updates = {};
     if (newWord) updates.word = newWord;
     if (newMeaning) updates.chinese_meaning = newMeaning;
@@ -443,15 +457,27 @@ async function saveMeaning(id) {
 }
 
 function cancelEdit(id) {
-  document.getElementById(`wordText-${id}`).classList.remove('hidden');
-  document.getElementById(`editWord-${id}`).classList.add('hidden');
-  document.getElementById(`meaning-${id}`).classList.remove('hidden');
-  document.getElementById(`edit-${id}`).classList.add('hidden');
-  document.getElementById(`posText-${id}`).classList.remove('hidden');
-  document.getElementById(`posEdit-${id}`).classList.add('hidden');
-  document.getElementById(`editBtn-${id}`).style.display = 'inline';
-  document.getElementById(`save-${id}`).style.display = 'none';
-  document.getElementById(`cancel-${id}`).style.display = 'none';
+  try {
+    const wordText = document.getElementById(`wordText-${id}`);
+    const editWord = document.getElementById(`editWord-${id}`);
+    const meaning = document.getElementById(`meaning-${id}`);
+    const edit = document.getElementById(`edit-${id}`);
+    const posText = document.getElementById(`posText-${id}`);
+    const posEdit = document.getElementById(`posEdit-${id}`);
+    const editBtn = document.getElementById(`editBtn-${id}`);
+    const save = document.getElementById(`save-${id}`);
+    const cancel = document.getElementById(`cancel-${id}`);
+    if (!wordText || !editWord || !meaning || !edit || !posText || !posEdit || !editBtn || !save || !cancel) return;
+    wordText.classList.remove('hidden');
+    editWord.classList.add('hidden');
+    meaning.classList.remove('hidden');
+    edit.classList.add('hidden');
+    posText.classList.remove('hidden');
+    posEdit.classList.add('hidden');
+    editBtn.style.display = 'inline';
+    save.style.display = 'none';
+    cancel.style.display = 'none';
+  } catch(e) { /* silent */ }
 }
 
 async function deleteVocabWord(id) {
