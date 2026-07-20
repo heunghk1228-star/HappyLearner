@@ -14,6 +14,7 @@ let initialQuestionCount = 0;
 // Tier filter state for word selection (specify mode)
 let revisionActiveTiers = ['newbee', 'well-tested', 'mastered'];
 let revisionTagFilter = '';
+let revisionSelectedIds = new Set(); // Track checked word IDs across filter changes
 
 // ============================================================
 // Page: Main entry — show mode selection
@@ -124,7 +125,7 @@ async function showWordSelection(words) {
     <div class="word-selection">
       <h3>📝 ${t('english.filter')} ${t('english.words')}</h3>
 
-      <div class="selection-filters">
+      <div class="selection-filters selection-filters-row">
         <div class="filter-row">
           <label>🏷️ ${t('english.tag')}:</label>
           <select class="input" id="revisionTagFilter" onchange="onRevisionFilterChange()" style="max-width:160px">
@@ -146,7 +147,7 @@ async function showWordSelection(words) {
 
       <div class="selection-actions">
         <label class="checkbox-inline">
-          <input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll()" checked>
+          <input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll()">
           <strong>${t('english.selectAll')}</strong>
         </label>
         <span class="selection-count">${t('english.totalWords')}: <strong id="selectedCount">${words.length}</strong></span>
@@ -156,7 +157,7 @@ async function showWordSelection(words) {
 
       <div class="selection-bottom">
         <div class="question-count-row">
-          <label>📝 ${t('english.question')} ${t('english.of')} ${t('english.words')}:</label>
+          <label>📝 題目數量:</label>
           <input type="number" class="input" id="questionCount" value="${words.length}" min="1" max="${words.length}" style="width:80px">
           <span class="question-count-note">(${t('english.totalWords')}: <span id="maxCount">${words.length}</span>)</span>
         </div>
@@ -166,6 +167,8 @@ async function showWordSelection(words) {
   `;
 
   renderRevisionWordList(words);
+  // Reset selection tracking
+  revisionSelectedIds = new Set();
 }
 
 function renderRevisionWordList(words) {
@@ -211,9 +214,10 @@ function renderListItems(filtered, totalCount) {
   list.innerHTML = filtered.map(w => {
     const tier = w.level <= 2 ? 'newbee' : w.level <= 5 ? 'well-tested' : 'mastered';
     const tierLabel = getTierLabel(w.level);
+    const isChecked = revisionSelectedIds.has(w.id) ? 'checked' : '';
     return `
       <label class="selection-item">
-        <input type="checkbox" value="${w.id}" data-word='${JSON.stringify(w).replace(/'/g, "&#39;")}' checked onchange="updateSelectionCount()">
+        <input type="checkbox" value="${w.id}" data-word='${JSON.stringify(w).replace(/'/g, "&#39;")}' ${isChecked} onchange="onRevisionCheckChange(this, '${w.id}')">
         <span><strong>${w.word}</strong> <small>${w.chinese_meaning || ''}</small> <span class="tier-badge tier-${tier}">${tierLabel}</span></span>
       </label>
     `;
@@ -222,6 +226,15 @@ function renderListItems(filtered, totalCount) {
   updateSelectionCount();
   const allChecked = document.querySelectorAll('#revisionWordList input:checked').length === filtered.length;
   selectAll.checked = allChecked && filtered.length > 0;
+}
+
+function onRevisionCheckChange(el, id) {
+  if (el.checked) {
+    revisionSelectedIds.add(id);
+  } else {
+    revisionSelectedIds.delete(id);
+  }
+  updateSelectionCount();
 }
 
 function updateSelectionCount() {
@@ -239,7 +252,14 @@ function updateSelectionCount() {
 
 function toggleSelectAll() {
   const checked = document.getElementById('selectAllCheck').checked;
-  document.querySelectorAll('#revisionWordList input[type="checkbox"]').forEach(cb => cb.checked = checked);
+  document.querySelectorAll('#revisionWordList input[type="checkbox"]').forEach(cb => {
+    cb.checked = checked;
+    if (checked) {
+      revisionSelectedIds.add(cb.value);
+    } else {
+      revisionSelectedIds.delete(cb.value);
+    }
+  });
   updateSelectionCount();
 }
 

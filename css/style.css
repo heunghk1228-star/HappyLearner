@@ -1320,6 +1320,13 @@ body {
   border-radius: 8px;
 }
 
+.selection-filters-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
 .filter-row {
   display: flex;
   align-items: center;
