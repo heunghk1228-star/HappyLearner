@@ -405,7 +405,10 @@ function editMeaning(id) {
     const colWord = row.querySelector('.col-word');
     if (!colWord) { showToast('❌ col-word not found. HTML: ' + debug); return; }
     const wordText = colWord.querySelector('.word-text');
-    if (!wordText) { showToast('❌ word-text not found. colWord: ' + colWord.innerHTML.substring(0, 100)); return; }
+    if (!wordText) { 
+      showToast('❌ word-text missing. row HTML: ' + row.innerHTML.substring(0, 300)); 
+      return; 
+    }
     const editWord = colWord.querySelector('.edit-input');
     const colMeaning = row.querySelector('.col-meaning');
     const meaning = colMeaning?.querySelector('.meaning-text');
