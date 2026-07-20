@@ -548,6 +548,7 @@ async function processManualInput() {
     showWordReviewPage(words);
   } catch (e) {
     hideLoading();
+    console.error('processManualInput error:', e);
     document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
   }
 }

@@ -390,24 +390,6 @@ function isLikelyValidWord(word) {
   if (w.length < 3) return false;
   if (!/[aeiouy]/i.test(w)) return false;
   
-  // Levenshtein check: if word is very close (distance <= 1) to a known word, it's likely a typo
-  if (w.length >= 3) {
-    const dictWords = COMMON_ENGLISH_WORDS;
-    // Only check words of similar length (±2)
-    const candidates = [];
-    for (const dictW of dictWords) {
-      if (Math.abs(dictW.length - w.length) <= 2) {
-        candidates.push(dictW);
-        if (candidates.length > 100) break; // limit for performance
-      }
-    }
-    for (const dictW of candidates) {
-      if (levenshtein(w, dictW) <= 1) {
-        return false; // Very close to a real word → likely a typo
-      }
-    }
-  }
-  
   return true; // Accept as plausible
 }
 
