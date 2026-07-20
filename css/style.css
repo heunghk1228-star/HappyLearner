@@ -1178,6 +1178,35 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.leveled-up-section {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  margin: 0.8rem 0 1.5rem 0;
+  text-align: left;
+}
+.leveled-up-title {
+  font-weight: bold;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  color: var(--mastered);
+}
+.leveled-up-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.leveled-up-item {
+  background: #dcfce7;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.leveled-up-item strong {
+  margin-right: 0.3rem;
+}
+
 /* ============================================================
    Word Selection (Specify mode)
    ============================================================ */

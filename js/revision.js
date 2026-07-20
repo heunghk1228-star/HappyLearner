@@ -10,6 +10,7 @@ let testHistory = []; // tracks which words were right/wrong for retry
 let currentQuestionType = 'spelling';
 let testQuestions = [];
 let retryQueue = [];
+let leveledUpWords = []; // words that leveled up during this test
 
 async function showRevisionPage() {
   if (!currentUser) {
@@ -46,6 +47,7 @@ async function startRevision(mode) {
   testHistory = [];
   testQuestions = [];
   retryQueue = [];
+  leveledUpWords = [];
   
   const words = await fetchVocabulary();
   if (!words.length) {
@@ -311,9 +313,11 @@ function submitAnswer() {
     if (testMode === 'auto' && q.word.level < 6) {
       const today = new Date().toISOString().split('T')[0];
       if (q.word.last_reviewed !== today) {
+        const oldLevel = q.word.level;
         const newLevel = Math.min(q.word.level + 1, 6);
         updateWordLevel(q.word.id, newLevel);
         q.word.level = newLevel;
+        leveledUpWords.push({ word: q.word.word, oldLevel, newLevel });
       }
     }
   } else {
@@ -395,6 +399,18 @@ function finishTest() {
       </div>
       <div class="encouragement">${encouragement}</div>
       ${earnedGem ? `<div class="gem-earned">💎 ${t('english.gemsEarned')}</div>` : `<div class="no-gem">${t('english.noGems')}</div>`}
+      ${leveledUpWords.length > 0 ? `
+        <div class="leveled-up-section">
+          <div class="leveled-up-title">⬆️ 升級字詞</div>
+          <div class="leveled-up-list">
+            ${leveledUpWords.map(lw => {
+              const oldLabel = getTierLabel(lw.oldLevel);
+              const newLabel = getTierLabel(lw.newLevel);
+              return `<div class="leveled-up-item"><strong>${lw.word}</strong> ${oldLabel} → ${newLabel}</div>`;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
       <div class="test-actions">
         <button class="btn btn-primary" onclick="startRevision('${testMode}')">🔄 ${t('english.startTest')}</button>
         <button class="btn btn-outline" onclick="showEnglishPage()">${t('english.back')}</button>
