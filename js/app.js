@@ -348,43 +348,48 @@ function renderVocabList(words) {
     return `<div class="empty-state">${t('common.placeholders')}</div>`;
   }
   
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  
   return words.map(w => {
     const posArr = w.part_of_speech ? w.part_of_speech.split(',') : [];
     const posLabels = posArr.map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
     const tierLabel = getTierLabel(w.level);
     const allPOS = Object.keys(POS_MAP);
+    const wid = esc(w.id);
+    const wword = esc(w.word);
+    const wmeaning = esc(w.chinese_meaning || '');
     
     return `
-      <div class="vocab-row" data-id="${w.id}">
-              <span class="col-word">
-                <span class="word-text" id="wordText-${w.id}"><strong>${w.word}</strong></span>
-                <input class="input edit-input hidden" id="editWord-${w.id}" value="${w.word}">
-              </span>
-              <span class="col-meaning">
-                <span class="meaning-text" id="meaning-${w.id}">${w.chinese_meaning || ''}</span>
-                <input class="input edit-input hidden" id="edit-${w.id}" value="${w.chinese_meaning || ''}">
-              </span>
-              <span class="col-pos">
-                <span class="pos-text" id="posText-${w.id}">${posLabels}</span>
-                <div class="pos-edit hidden" id="posEdit-${w.id}">
-                  ${allPOS.map(p => `
-                    <label class="pos-checkbox">
-                      <input type="checkbox" value="${p}" ${posArr.includes(p) ? 'checked' : ''}>
-                      ${POS_MAP[p]?.[currentLang] || p}
-                    </label>
-                  `).join('')}
-                </div>
-              </span>
-              <span class="col-level">
-                <span class="level-badge level-${w.level}">${tierLabel}</span>
-              </span>
-              <span class="col-actions">
-                <button class="btn-icon" onclick="editMeaning('${w.id}')" id="editBtn-${w.id}" title="✏️">✏️</button>
-                <button class="btn-icon" onclick="saveMeaning('${w.id}')" id="save-${w.id}" style="display:none" title="💾">💾</button>
-                <button class="btn-icon" onclick="cancelEdit('${w.id}')" id="cancel-${w.id}" style="display:none" title="❌">❌</button>
-                <button class="btn-icon" onclick="deleteVocabWord('${w.id}')" title="🗑️">🗑️</button>
-              </span>
-            </div>
+      <div class="vocab-row" data-id="${wid}">
+        <span class="col-word">
+          <span class="word-text" id="wordText-${wid}"><strong>${wword}</strong></span>
+          <input class="input edit-input hidden" id="editWord-${wid}" value="${wword}">
+        </span>
+        <span class="col-meaning">
+          <span class="meaning-text" id="meaning-${wid}">${wmeaning}</span>
+          <input class="input edit-input hidden" id="edit-${wid}" value="${wmeaning}">
+        </span>
+        <span class="col-pos">
+          <span class="pos-text" id="posText-${wid}">${posLabels}</span>
+          <div class="pos-edit hidden" id="posEdit-${wid}">
+            ${allPOS.map(p => `
+              <label class="pos-checkbox">
+                <input type="checkbox" value="${p}" ${posArr.includes(p) ? 'checked' : ''}>
+                ${POS_MAP[p]?.[currentLang] || p}
+              </label>
+            `).join('')}
+          </div>
+        </span>
+        <span class="col-level">
+          <span class="level-badge level-${w.level}">${tierLabel}</span>
+        </span>
+        <span class="col-actions">
+          <button class="btn-icon" onclick="editMeaning('${wid}')" id="editBtn-${wid}" title="✏️">✏️</button>
+          <button class="btn-icon" onclick="saveMeaning('${wid}')" id="save-${wid}" style="display:none" title="💾">💾</button>
+          <button class="btn-icon" onclick="cancelEdit('${wid}')" id="cancel-${wid}" style="display:none" title="❌">❌</button>
+          <button class="btn-icon" onclick="deleteVocabWord('${wid}')" title="🗑️">🗑️</button>
+        </span>
+      </div>
     `;
   }).join('');
 }
