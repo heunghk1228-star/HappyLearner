@@ -15,15 +15,20 @@ async function initSupabase() {
   const { createClient } = window.supabase;
   supabaseClient = createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey);
   
-  // Check existing session
+  // Check existing session with timeout
   try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    const sessionPromise = supabaseClient.auth.getSession();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Supabase timeout')), 5000)
+    );
+    const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
     if (session) {
       currentUser = session.user;
       await ensureProfile(session.user.id);
     }
   } catch (e) {
-    console.warn('Session check failed:', e.message);
+    console.warn('Session check failed (timeout):', e.message);
+    // Proceed without user — app works in offline/guest mode
   }
   
   // Listen for auth changes
