@@ -10,7 +10,8 @@ let testHistory = []; // tracks which words were right/wrong for retry
 let currentQuestionType = 'spelling';
 let testQuestions = [];
 let retryQueue = [];
-let leveledUpWords = []; // words that leveled up during this test
+let leveledUpWords = [];
+let initialQuestionCount = 0; // words that leveled up during this test
 
 async function showRevisionPage() {
   if (!currentUser) {
@@ -128,6 +129,7 @@ function confirmWordSelection() {
 
 function prepareQuestions() {
   testQuestions = [];
+  initialQuestionCount = testWords.length;
   
   for (const word of testWords) {
     const level = word.level || 1;
@@ -367,10 +369,10 @@ function nextQuestion() {
 function finishTest() {
   const area = document.getElementById('revisionArea');
   const earnedGem = correctCount > 5;
-  const pct = Math.round((correctCount / testQuestions.length) * 100);
+  const pct = Math.round((correctCount / initialQuestionCount) * 100);
   
-  // Auto check-in — only if test has >= 7 questions
-  if (testQuestions.length >= 7) {
+  // Auto check-in — only if test has >= 7 initial questions
+  if (initialQuestionCount >= 7) {
     doCheckIn().catch(() => {});
   }
   
@@ -401,7 +403,7 @@ function finishTest() {
       <h2>${t('english.testComplete')}</h2>
       <div class="complete-stats">
         <div class="stat-item">
-          <div class="stat-num">${correctCount}/${testQuestions.length}</div>
+          <div class="stat-num">${correctCount}/${initialQuestionCount}</div>
           <div class="stat-label">${t('english.correct')}</div>
         </div>
         <div class="stat-item">
