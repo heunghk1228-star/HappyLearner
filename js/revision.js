@@ -17,7 +17,9 @@ async function showRevisionPage() {
     alert(t('english.loginRequired'));
     return;
   }
-  history.replaceState({}, '', '#english/revision');
+  if (window.location.hash !== '#english/revision') {
+    history.pushState({}, '', '#english/revision');
+  }
   
   const page = document.getElementById('pageContent');
   page.innerHTML = `
@@ -363,6 +365,7 @@ function nextQuestion() {
 function finishTest() {
   const area = document.getElementById('revisionArea');
   const earnedGem = correctCount > 5;
+  const pct = Math.round((correctCount / testQuestions.length) * 100);
   
   // Auto check-in — only if test has >= 7 questions
   if (testQuestions.length >= 7) {
@@ -370,10 +373,10 @@ function finishTest() {
   }
   
   if (earnedGem) {
-    // Add gem
-    getProfile().then(profile => {
+    // Add gem — wait for DB write before refreshing display
+    getProfile().then(async (profile) => {
       const currentGems = profile?.gems || 0;
-      updateGems(currentGems + 1);
+      await updateGems(currentGems + 1);
       loadGemCount();
     });
   }
@@ -385,7 +388,6 @@ function finishTest() {
   
   // Show encouragement
   let encouragement = '';
-  const pct = Math.round((correctCount / testQuestions.length) * 100);
   if (pct >= 90) encouragement = '🏆 ' + t('english.correct');
   else if (pct >= 70) encouragement = '🌟 ' + t('english.wellTested');
   else if (pct >= 50) encouragement = '💪 ' + t('english.wrong');

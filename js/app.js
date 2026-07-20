@@ -238,7 +238,10 @@ function showEnglishPage() {
 }
 
 async function openVocabularyBook() {
-  history.replaceState({}, '', '#english/vocab');
+  // Only push state if not already on this hash (e.g. direct URL load)
+  if (window.location.hash !== '#english/vocab') {
+    history.pushState({}, '', '#english/vocab');
+  }
   showLoading();
   const words = await fetchVocabulary();
   
