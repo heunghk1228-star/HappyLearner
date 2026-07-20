@@ -1456,6 +1456,14 @@ async function openAccountSettings() {
         </div>
       </div>
       
+      <div class="settings-section">
+        <label>🎵 測驗完成音樂</label>
+        <label class="toggle-label">
+          <input type="checkbox" id="settingCelebrationMusic" ${getCelebrationMusicEnabled() ? 'checked' : ''}>
+          <span>完成測驗時播放慶祝音樂</span>
+        </label>
+      </div>
+      
       <div class="settings-actions">
         <button class="btn btn-primary" onclick="saveAccountSettings()">💾 儲存</button>
         <button class="btn btn-outline" onclick="showEnglishPage()">← 返回</button>
@@ -1489,6 +1497,10 @@ async function saveAccountSettings() {
   if (slowSlider) setSlowRate(parseFloat(slowSlider.value));
   const fastSlider = document.getElementById('settingFastRate');
   if (fastSlider) setFastRate(parseFloat(fastSlider.value));
+  
+  // Save celebration music setting
+  const musicCb = document.getElementById('settingCelebrationMusic');
+  if (musicCb) setCelebrationMusicEnabled(musicCb.checked);
   
   try {
     await updateProfile(fields);

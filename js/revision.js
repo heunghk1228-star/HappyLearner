@@ -377,6 +377,11 @@ function finishTest() {
       loadGemCount();
     });
   }
+
+  // Play celebration music if score >= 70%
+  if (pct >= 70) {
+    setTimeout(() => playCelebrationMusic(), 300);
+  }
   
   // Show encouragement
   let encouragement = '';
@@ -464,5 +469,79 @@ function playClapSound() {
       o.stop(now + n.start + n.dur + 0.05);
     }
     setTimeout(() => ctx.close(), 1000);
+  } catch (e) { /* silent fail */ }
+}
+
+// ============================================================
+// Celebration Music — played on test completion (≥70%)
+// ============================================================
+
+function getCelebrationMusicEnabled() {
+  return localStorage.getItem('celebrationMusic') !== 'off';
+}
+
+function setCelebrationMusicEnabled(val) {
+  localStorage.setItem('celebrationMusic', val ? 'on' : 'off');
+}
+
+function playCelebrationMusic() {
+  if (!getCelebrationMusicEnabled()) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+
+    // Master gain with fade-out
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.35, now);
+    masterGain.gain.setValueAtTime(0.35, now + 2.5);
+    masterGain.gain.exponentialRampToValueAtTime(0.01, now + 4.0);
+    masterGain.connect(ctx.destination);
+
+    // Helper: play a note
+    function playNote(freq, start, dur, type, gainVal) {
+      const o = ctx.createOscillator();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, now + start);
+      const ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.01, now + start);
+      ng.gain.linearRampToValueAtTime(gainVal || 0.3, now + start + 0.05);
+      ng.gain.setValueAtTime(gainVal || 0.3, now + start + dur - 0.15);
+      ng.gain.exponentialRampToValueAtTime(0.01, now + start + dur);
+      o.connect(ng);
+      ng.connect(masterGain);
+      o.start(now + start);
+      o.stop(now + start + dur + 0.05);
+    }
+
+    // Happy fanfare melody (key: C major)
+    // Part 1: Ascending arpeggio
+    playNote(523.25, 0.0, 0.25, 'sine', 0.3);     // C5
+    playNote(659.25, 0.15, 0.25, 'sine', 0.3);    // E5
+    playNote(783.99, 0.3, 0.25, 'sine', 0.3);     // G5
+    playNote(1046.5, 0.45, 0.4, 'sine', 0.35);    // C6 (high note!)
+
+    // Part 2: Happy descending motif with chord
+    // Chord: C major (C,E,G) at beat 1.0
+    playNote(523.25, 1.0, 0.6, 'triangle', 0.2);  // C5
+    playNote(659.25, 1.0, 0.6, 'triangle', 0.2);  // E5
+    playNote(783.99, 1.0, 0.6, 'triangle', 0.2);  // G5
+
+    // Descending melody over chord
+    playNote(783.99, 1.0, 0.2, 'sine', 0.25);     // G5
+    playNote(659.25, 1.2, 0.25, 'sine', 0.25);    // E5
+    playNote(587.33, 1.45, 0.3, 'sine', 0.25);    // D5
+    playNote(523.25, 1.75, 0.4, 'sine', 0.3);     // C5
+
+    // Part 3: Final triumphant flourish
+    // Chord: C5 + E5 + G5 + C6
+    playNote(523.25, 2.4, 0.7, 'triangle', 0.2);  // C5
+    playNote(659.25, 2.4, 0.7, 'triangle', 0.2);  // E5
+    playNote(783.99, 2.4, 0.7, 'triangle', 0.2);  // G5
+    playNote(1046.5, 2.4, 0.8, 'sine', 0.3);      // C6
+
+    // Extra sparkle
+    playNote(1318.5, 2.6, 0.5, 'sine', 0.15);     // E6
+
+    setTimeout(() => ctx.close(), 5000);
   } catch (e) { /* silent fail */ }
 }
