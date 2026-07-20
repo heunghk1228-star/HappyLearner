@@ -396,14 +396,16 @@ function renderVocabList(words) {
 
 function editMeaning(id) {
   try {
-    // Find the button by its ID, then traverse to siblings
     const btn = document.getElementById(`editBtn-${id}`);
-    if (!btn) { showToast('❌ 找不到編輯按鈕'); return; }
+    if (!btn) { showToast('❌ btn not found: editBtn-' + id); return; }
     const row = btn.closest('.vocab-row');
-    if (!row) { showToast('❌ 找不到詞彙行'); return; }
+    if (!row) { showToast('❌ row not found'); return; }
+    // Debug: check what's in the row
+    const debug = row.innerHTML.substring(0, 200);
     const colWord = row.querySelector('.col-word');
-    if (!colWord) { showToast('❌ 找不到 col-word'); return; }
+    if (!colWord) { showToast('❌ col-word not found. HTML: ' + debug); return; }
     const wordText = colWord.querySelector('.word-text');
+    if (!wordText) { showToast('❌ word-text not found. colWord: ' + colWord.innerHTML.substring(0, 100)); return; }
     const editWord = colWord.querySelector('.edit-input');
     const colMeaning = row.querySelector('.col-meaning');
     const meaning = colMeaning?.querySelector('.meaning-text');
@@ -413,7 +415,7 @@ function editMeaning(id) {
     const posEdit = colPos?.querySelector('.pos-edit');
     const save = document.getElementById(`save-${id}`);
     const cancel = document.getElementById(`cancel-${id}`);
-    if (!wordText || !editWord || !meaning || !edit || !posText || !posEdit || !save || !cancel) {
+    if (!editWord || !meaning || !edit || !posText || !posEdit || !save || !cancel) {
       showToast('❌ DOM結構異常');
       return;
     }
