@@ -142,7 +142,8 @@ const I18N = {
       fast: '快',
       deleteTag: '刪除標籤',
       tagAllNote: '所選標籤會套用到所有新字詞',
-      autoVoice: '自動選擇'
+      autoVoice: '自動選擇',
+      inputGuide: '輸入詞彙或整篇文章，AI 會自動提取生字'
     },
     math: {
       title: '數學',
@@ -308,7 +309,8 @@ const I18N = {
       fast: '快',
       deleteTag: '删除标签',
       tagAllNote: '所选标签会套用到所有新字词',
-      autoVoice: '自动选择'
+      autoVoice: '自动选择',
+      inputGuide: '输入词汇或整篇文章，AI 会自动提取生字'
     },
     math: { title: '数学', comingSoon: '即将推出...' },
     science: { title: '科学', comingSoon: '即将推出...' },
@@ -461,7 +463,8 @@ const I18N = {
       fast: 'Fast',
       deleteTag: 'Delete Tag',
       tagAllNote: 'Selected tag will be applied to ALL new words',
-      autoVoice: 'Auto'
+      autoVoice: 'Auto',
+      inputGuide: 'Enter words or a full article — AI will extract vocabulary'
     },
     math: { title: 'Math', comingSoon: 'Coming soon...' },
     science: { title: 'Science', comingSoon: 'Coming soon...' },

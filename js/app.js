@@ -480,28 +480,11 @@ function showAddWordsPage() {
   content.innerHTML = `
     <div class="add-words-page">
       <h3>${t('english.inputWords')}</h3>
-      <div class="input-mode-tabs">
-        <button class="tab-btn active" data-mode="manual" onclick="switchInputMode('manual')">✏️ Manual</button>
-        <button class="tab-btn" data-mode="article" onclick="switchInputMode('article')">📄 Article (AI)</button>
-      </div>
-      
-      <!-- Manual mode -->
-      <div id="inputModeManual" class="input-mode-panel">
-        <p class="guide">Type words separated by commas or line breaks.</p>
-        <textarea class="input textarea-input" id="wordInputManual" rows="6" 
-                  placeholder="apple, banana, cat, dog, elephant"></textarea>
-        <div class="word-count" id="wordCountManual">0 words</div>
-        <button class="btn btn-primary" onclick="processManualInput()">${t('english.submit')}</button>
-      </div>
-      
-      <!-- Article mode -->
-      <div id="inputModeArticle" class="input-mode-panel hidden">
-        <p class="guide">Paste an article — AI will extract base forms.</p>
-        <textarea class="input textarea-input" id="wordInputArticle" rows="6" 
-                  placeholder="Peter has ten toes. He doesn't like apples."></textarea>
-        <div class="word-count" id="wordCountArticle">0 words</div>
-        <button class="btn btn-primary" onclick="processArticleInput()">${t('english.submit')} (AI)...</button>
-      </div>
+      <p class="guide">${t('english.inputGuide')}</p>
+      <textarea class="input textarea-input" id="wordInput" rows="8" 
+                placeholder="apple, banana, cat, dog, elephant${unescape('%0A')}Peter has ten toes. He doesn't like apples."></textarea>
+      <div class="word-count" id="wordCount">0 words</div>
+      <button class="btn btn-primary" onclick="processWordInput()">${t('english.submit')}</button>
       
       <div id="addResult" class="add-result"></div>
       <button class="btn btn-outline" onclick="openVocabularyBook()" style="margin-top: 1rem;">
@@ -510,86 +493,53 @@ function showAddWordsPage() {
     </div>
   `;
   
-  // Word count for both modes
-  document.getElementById('wordInputManual').addEventListener('input', function() {
-    const words = this.value.trim().split(/[,\n]+/).map(w => w.trim()).filter(w => w.length > 0);
-    document.getElementById('wordCountManual').textContent = `${words.length} words`;
-  });
-  document.getElementById('wordInputArticle').addEventListener('input', function() {
-    const words = this.value.trim().split(/\s+/).filter(w => w.length > 0);
-    document.getElementById('wordCountArticle').textContent = `${words.length} words`;
+  // Word count
+  document.getElementById('wordInput').addEventListener('input', function() {
+    const words = this.value.trim().split(/[,\s\n]+/).filter(w => w.trim().length > 0);
+    document.getElementById('wordCount').textContent = `${words.length} words`;
   });
 }
 
-function switchInputMode(mode) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.tab-btn[data-mode="${mode}"]`).classList.add('active');
-  document.querySelectorAll('.input-mode-panel').forEach(p => p.classList.add('hidden'));
-  document.getElementById(`inputMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.remove('hidden');
-}
-
-// Manual input: word-by-word, no AI normalization → show review page
-async function processManualInput() {
-  const text = document.getElementById('wordInputManual').value.trim();
+// Unified input: strip punctuation, expand contractions, AI normalize, classify
+async function processWordInput() {
+  const text = document.getElementById('wordInput').value.trim();
   if (!text) return;
-  
-  const raw = text.split(/[,\s\n]+/).map(w => w.trim().toLowerCase().replace(/[^a-zA-Z]/g, '')).filter(w => w.length > 0);
-  const seen = new Set();
-  const unique = [];
-  for (const w of raw) {
-    if (!seen.has(w)) { seen.add(w); unique.push(w); }
-  }
-  if (!unique.length) { document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; return; }
   
   showLoading();
   try {
-    const words = await classifyAndPrepareWords(unique);
-    hideLoading();
-    showWordReviewPage(words);
-  } catch (e) {
-    hideLoading();
-    console.error('processManualInput error:', e);
-    document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
-  }
-}
-
-// Article input: AI normalization → show review page
-async function processArticleInput() {
-  const textarea = document.getElementById('wordInputArticle');
-  const text = textarea.value.trim();
-  if (!text) return;
-  
-  let raw = text.replace(/[^\w\s'-]/g, ' ').split(/\s+/).filter(w => w.length > 1 && /^[a-zA-Z]/.test(w));
-  const CONTRACTIONS = {
-    "doesn't": "does not", "don't": "do not", "can't": "cannot", "couldn't": "could not",
-    "wouldn't": "would not", "shouldn't": "should not", "won't": "will not",
-    "wasn't": "was not", "weren't": "were not", "hasn't": "has not", "haven't": "have not",
-    "hadn't": "had not", "didn't": "did not", "isn't": "is not", "aren't": "are not",
-    "mightn't": "might not", "mustn't": "must not", "needn't": "need not",
-    "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is",
-    "it's": "it is", "we're": "we are", "they're": "they are",
-    "i've": "i have", "you've": "you have", "we've": "we have", "they've": "they have",
-    "i'll": "i will", "you'll": "you will", "he'll": "he will", "she'll": "she will",
-    "we'll": "we will", "they'll": "they will",
-    "i'd": "i would", "you'd": "you would", "he'd": "he would", "she'd": "she would",
-    "we'd": "we would", "they'd": "they would"
-  };
-  const expanded = [];
-  for (const w of raw) {
-    expanded.push(...(CONTRACTIONS[w.toLowerCase()] || w).split(' '));
-  }
-  
-  const seen = new Set();
-  const unique = [];
-  for (const w of expanded) {
-    const lower = w.toLowerCase();
-    if (!seen.has(lower)) { seen.add(lower); unique.push(lower); }
-  }
-  if (!unique.length) { document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; return; }
-  
-  showLoading();
-  try {
-    // AI normalize (skips people's names, keeps country/race names)
+    // Step 1: Strip punctuation, extract raw words
+    let raw = text.replace(/[^\w\s'-]/g, ' ').split(/\s+/).filter(w => w.length > 1 && /^[a-zA-Z]/.test(w));
+    
+    // Step 2: Expand contractions
+    const CONTRACTIONS = {
+      "doesn't": "does not", "don't": "do not", "can't": "cannot", "couldn't": "could not",
+      "wouldn't": "would not", "shouldn't": "should not", "won't": "will not",
+      "wasn't": "was not", "weren't": "were not", "hasn't": "has not", "haven't": "have not",
+      "hadn't": "had not", "didn't": "did not", "isn't": "is not", "aren't": "are not",
+      "mightn't": "might not", "mustn't": "must not", "needn't": "need not",
+      "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is",
+      "it's": "it is", "we're": "we are", "they're": "they are",
+      "i've": "i have", "you've": "you have", "we've": "we have", "they've": "they have",
+      "i'll": "i will", "you'll": "you will", "he'll": "he will", "she'll": "she will",
+      "we'll": "we will", "they'll": "they will",
+      "i'd": "i would", "you'd": "you would", "he'd": "he would", "she'd": "she would",
+      "we'd": "we would", "they'd": "they would"
+    };
+    const expanded = [];
+    for (const w of raw) {
+      expanded.push(...(CONTRACTIONS[w.toLowerCase()] || w).split(' '));
+    }
+    
+    // Step 3: Dedup
+    const seen = new Set();
+    const unique = [];
+    for (const w of expanded) {
+      const lower = w.toLowerCase();
+      if (!seen.has(lower)) { seen.add(lower); unique.push(lower); }
+    }
+    if (!unique.length) { document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; hideLoading(); return; }
+    
+    // Step 4: AI normalize (base forms, contractions)
     const normalized = await callAIBatchNormalize(unique.slice(0, 100));
     const seenNorm = new Set();
     const uniqueNorm = [];
@@ -605,16 +555,20 @@ async function processArticleInput() {
       document.getElementById('addResult').innerHTML = '<div class="result-info">No new words to add</div>';
       return;
     }
+    
+    // Step 5: Classify and show review page
     const words = await classifyAndPrepareWords(wordTexts);
-    // Preserve AI-detected POS
     for (const w of words) {
       const match = uniqueNorm.find(u => u.word === w.word);
       if (match && match.pos) w.pos = match.pos;
     }
     hideLoading();
+    document.getElementById('wordInput').value = '';
+    document.getElementById('wordCount').textContent = '0 words';
     showWordReviewPage(words);
   } catch (e) {
     hideLoading();
+    console.error('processWordInput error:', e);
     document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
   }
 }
