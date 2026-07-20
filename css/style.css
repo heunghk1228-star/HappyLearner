@@ -1451,6 +1451,10 @@ body {
   background: #22c55e !important;
 }
 
+.gol-cell-preview {
+  background: #818cf8 !important;
+}
+
 .retry-notice {
   text-align: center;
   padding: 0.5rem;
