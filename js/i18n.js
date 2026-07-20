@@ -134,6 +134,11 @@ const I18N = {
       errorWords: '錯誤輸入',
       successWords: '成功輸入',
       duplicateWords: '重複輸入',
+      speechUnavailable: '裝置不支援語音',
+      testVoice: '測試語音',
+      speechSpeed: '語速',
+      slow: '慢',
+      fast: '快',
       deleteTag: '刪除標籤'
     },
     math: {
@@ -292,6 +297,11 @@ const I18N = {
       errorWords: '错误输入',
       successWords: '成功输入',
       duplicateWords: '重复输入',
+      speechUnavailable: '设备不支持语音',
+      testVoice: '测试语音',
+      speechSpeed: '语速',
+      slow: '慢',
+      fast: '快',
       deleteTag: '删除标签'
     },
     math: { title: '数学', comingSoon: '即将推出...' },
@@ -438,6 +448,11 @@ const I18N = {
       errorWords: 'Errors',
       successWords: 'Success',
       duplicateWords: 'Duplicates',
+      speechUnavailable: 'Speech not available on this device',
+      testVoice: 'Test Voice',
+      speechSpeed: 'Speed',
+      slow: 'Slow',
+      fast: 'Fast',
       deleteTag: 'Delete Tag'
     },
     math: { title: 'Math', comingSoon: 'Coming soon...' },

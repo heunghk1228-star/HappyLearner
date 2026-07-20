@@ -1343,6 +1343,18 @@ async function openAccountSettings() {
         <input type="email" class="input" id="settingContactEmail" value="${profile?.contact_email || ''}" placeholder="backup@email.com">
       </div>
       
+      <div class="settings-section">
+        <label>🔊 ${t('english.speechSpeed')}</label>
+        <div class="speech-speed-setting">
+          <span>${t('english.slow')}</span>
+          <input type="range" id="settingSpeechSpeed" min="0.3" max="1.0" step="0.05" value="${getSpeechRate()}"
+                 oninput="document.getElementById('settingSpeedVal').textContent = Math.round(this.value * 100) + '%'">
+          <span>${t('english.fast')}</span>
+          <span class="speed-value" id="settingSpeedVal">${Math.round(getSpeechRate() * 100)}%</span>
+          <button class="btn btn-sm btn-outline" onclick="speakWord('Hello, test one two three')">🎤 ${t('english.testVoice')}</button>
+        </div>
+      </div>
+      
       <div class="settings-actions">
         <button class="btn btn-primary" onclick="saveAccountSettings()">💾 儲存</button>
         <button class="btn btn-outline" onclick="showEnglishPage()">← 返回</button>
@@ -1370,6 +1382,12 @@ async function saveAccountSettings() {
   };
   const avatarUrl = document.getElementById('settingAvatarUrl').value.trim();
   if (avatarUrl) fields.avatar_url = avatarUrl;
+  
+  // Save speech speed locally
+  const speedSlider = document.getElementById('settingSpeechSpeed');
+  if (speedSlider) {
+    setSpeechRate(parseFloat(speedSlider.value));
+  }
   
   try {
     await updateProfile(fields);

@@ -197,14 +197,158 @@ function prevPage() {
   }
 }
 
-function speakWord(word) {
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(word);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
+// ============================================================
+// Pronunciation — Speak Word with voice selection
+// ============================================================
+
+// Get stored speech rate from localStorage
+function getSpeechRate() {
+  return parseFloat(localStorage.getItem('speechRate')) || 0.65;
+}
+
+function setSpeechRate(rate) {
+  localStorage.setItem('speechRate', rate.toString());
+}
+
+// Get preferred voice name
+function getSpeechVoice() {
+  return localStorage.getItem('speechVoice') || '';
+}
+
+function setSpeechVoice(voiceName) {
+  localStorage.setItem('speechVoice', voiceName || '');
+}
+
+// Lazy-init voices cache
+let voicesLoaded = false;
+let availableVoices = [];
+
+function initVoices() {
+  return new Promise((resolve) => {
+    if (!('speechSynthesis' in window)) { resolve([]); return; }
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      availableVoices = voices;
+      voicesLoaded = true;
+      resolve(voices);
+      return;
+    }
+    // Voices might load asynchronously (especially on Chrome)
+    window.speechSynthesis.onvoiceschanged = () => {
+      availableVoices = window.speechSynthesis.getVoices();
+      voicesLoaded = true;
+      resolve(availableVoices);
+    };
+    // Timeout fallback
+    setTimeout(() => {
+      if (!voicesLoaded) {
+        const v = window.speechSynthesis.getVoices();
+        if (v.length > 0) {
+          availableVoices = v;
+          voicesLoaded = true;
+        }
+        resolve(availableVoices);
+      }
+    }, 2000);
+  });
+}
+
+function pickBestVoice() {
+  const preferred = getSpeechVoice();
+  
+  // 1. Try user's preferred voice
+  if (preferred) {
+    const match = availableVoices.find(v => v.name === preferred);
+    if (match) return match;
   }
+  
+  // 2. Try to find a good English voice — prefer natural-sounding voices
+  const englishVoices = availableVoices.filter(v => v.lang.startsWith('en'));
+  
+  // Priority order: good desktop voices first
+  const priorityNames = [
+    'Microsoft David', 'Microsoft Zira', 'Microsoft Mark',
+    'Google US English', 'Samantha', 'Karen', 'Daniel',
+    'Alex', 'Moira', 'Fiona', 'Tessa', 'Veena',
+    'Siri', 'English United States', 'English United Kingdom'
+  ];
+  
+  for (const name of priorityNames) {
+    const match = englishVoices.find(v => v.name.includes(name));
+    if (match) return match;
+  }
+  
+  // 3. Fallback: any English voice
+  if (englishVoices.length > 0) return englishVoices[0];
+  
+  // 4. Last resort: any voice
+  return availableVoices[0] || null;
+}
+
+function speakWord(word) {
+  if (!('speechSynthesis' in window)) {
+    showToast('🔇 ' + (t('english.speechUnavailable') || 'Speech not available on this device'));
+    return;
+  }
+  
+  // Cancel any ongoing speech
+  window.speechSynthesis.cancel();
+  
+  if (!word) return;
+  
+  const rate = getSpeechRate();
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = 'en-US';
+  utterance.rate = rate;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+  
+  // Try to pick the best voice
+  if (availableVoices.length === 0) {
+    // Try to init voices synchronously
+    const v = window.speechSynthesis.getVoices();
+    if (v.length > 0) availableVoices = v;
+  }
+  
+  const voice = pickBestVoice();
+  if (voice) {
+    utterance.voice = voice;
+  }
+  
+  // Handle errors
+  utterance.onerror = (e) => {
+    if (e.error !== 'canceled' && e.error !== 'interrupted') {
+      console.warn('Speech error:', e.error);
+      // Retry once after a short delay (some browsers need a fresh context)
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch(err) {
+          console.warn('Speech retry failed:', err);
+        }
+      }, 300);
+    }
+  };
+  
+  // Speak
+  try {
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.warn('SpeechSynthesis.speak failed:', e);
+    showToast('🔇 ' + (t('english.speechUnavailable') || 'Speech not available'));
+  }
+}
+
+function updateSpeechSpeed(value) {
+  const rate = parseFloat(value);
+  setSpeechRate(rate);
+  document.getElementById('speedValue').textContent = Math.round(rate * 100) + '%';
+  // Test the new speed immediately
+  speakWord('Hello');
+}
+
+function testSpeechVoice() {
+  speakWord('Hello, this is a test. The quick brown fox jumps over the lazy dog.');
 }
 
 // ============================================================
@@ -256,17 +400,27 @@ async function openFlashcards() {
   page.innerHTML = `
     <div class="page-header">
       <h2>${t('english.flashCards')}</h2>
-      <div class="filter-bar">
-        <select id="flashcardFilter" onchange="filterFlashcards()" class="input">
+      <div class="filter-bar" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+        <select id="flashcardFilter" onchange="filterFlashcards()" class="input" style="flex:1;min-width:100px">
           <option value="all">${t('english.all')} — ${t('english.words')}</option>
           <option value="newbee">${t('english.newbee')}</option>
           <option value="well-tested">${t('english.wellTested')}</option>
           <option value="mastered">${t('english.mastered')}</option>
         </select>
+        <div class="speech-speed-control">
+          <span class="speed-label">🔊</span>
+          <input type="range" id="speechSpeedSlider" min="0.3" max="1.0" step="0.05" value="${getSpeechRate()}"
+                 oninput="updateSpeechSpeed(this.value)" style="width:80px;vertical-align:middle">
+          <span class="speed-value" id="speedValue">${Math.round(getSpeechRate() * 100)}%</span>
+          <button class="btn-icon" onclick="testSpeechVoice()" title="${t('english.testVoice')}">🎤</button>
+        </div>
       </div>
     </div>
     <div id="flashcardContainer"></div>
   `;
+
+  // Init voices on first load
+  initVoices();
 
   currentFlashcards = words;
   renderFlashcards(words);
