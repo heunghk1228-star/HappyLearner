@@ -63,9 +63,9 @@ async function startRevision(mode) {
   leveledUpWords = [];
   initialQuestionCount = 0;
 
-  // Hide the mode selection cards
+  // Hide the mode selection cards when auto mode starts directly
+  // (specify mode keeps them visible during word selection)
   const modes = document.querySelector('.revision-modes');
-  if (modes) modes.style.display = 'none';
 
   const words = await fetchVocabulary();
   if (!words.length) {
@@ -76,6 +76,8 @@ async function startRevision(mode) {
   }
 
   if (mode === 'auto') {
+    // Hide mode cards — auto test starts immediately
+    if (modes) modes.style.display = 'none';
     // Auto mode: pick 3 newbee, 2 well-tested, 2 mastered
     const newbee = words.filter(w => w.level <= 2);
     const wellTested = words.filter(w => w.level >= 3 && w.level <= 5);
@@ -263,6 +265,10 @@ function onRevisionFilterChange() {
 // ============================================================
 
 function confirmWordSelection() {
+  // Hide mode cards — test is about to start
+  const modes = document.querySelector('.revision-modes');
+  if (modes) modes.style.display = 'none';
+
   const checked = document.querySelectorAll('#revisionWordList input:checked');
   if (checked.length === 0) {
     alert(t('english.filter'));
