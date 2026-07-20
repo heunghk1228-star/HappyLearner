@@ -1108,8 +1108,29 @@ async function toggleWordTag(wordId, tagId, add) {
     } else {
       await removeTagFromWord(wordId, tagId);
     }
+    // Refresh the row's tag badges immediately
+    await refreshVocabRowTags(wordId);
   } catch(e) {
     showToast('❌ ' + e.message);
+  }
+}
+
+async function refreshVocabRowTags(wordId) {
+  const row = document.querySelector(`.vocab-row[data-id="${wordId}"]`);
+  if (!row) return;
+  const tagsEl = row.querySelector('.col-tags');
+  if (!tagsEl) return;
+  try {
+    const tags = await fetchWordTags(wordId);
+    if (tags.length > 0) {
+      tagsEl.innerHTML = tags.map(t => 
+        `<span class="tag-badge" style="background:${t.color || '#6366f1'}20;color:${t.color || '#6366f1'}">${t.name}</span>`
+      ).join('');
+    } else {
+      tagsEl.innerHTML = '<span class="text-light" style="font-size:0.75rem">—</span>';
+    }
+  } catch(e) {
+    console.warn('Refresh tags failed:', e);
   }
 }
 
