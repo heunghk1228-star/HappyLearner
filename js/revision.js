@@ -156,8 +156,9 @@ async function showWordSelection(words) {
 
       <div class="selection-bottom">
         <div class="question-count-row">
-          <label>📝 題目數量 (不超過 <span id="maxCount">${words.length}</span>):</label>
+          <label>📝 題目數量:</label>
           <input type="number" class="input" id="questionCount" value="${words.length}" min="1" max="${words.length}" style="width:80px">
+          <span class="question-count-note">(已選: <span id="maxCount">${words.length}</span>)</span>
         </div>
         <button class="btn btn-primary" onclick="confirmWordSelection()">${t('english.startTest')}</button>
       </div>
@@ -238,8 +239,6 @@ function onRevisionCheckChange(el, id) {
 function updateSelectionCount(visibleCount) {
   const totalSelected = revisionSelectedIds.size;
   const qtyInput = document.getElementById('questionCount');
-  const maxEl = document.getElementById('maxCount');
-  if (maxEl) maxEl.textContent = totalSelected;
   if (qtyInput) {
     qtyInput.max = totalSelected;
     if (parseInt(qtyInput.value) > totalSelected) qtyInput.value = totalSelected;
