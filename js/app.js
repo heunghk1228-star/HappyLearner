@@ -302,9 +302,9 @@ async function openVocabularyBook() {
                placeholder="${t('english.search')}" 
                oninput="searchVocabList(this.value)">
         <div class="tier-filter-btns" style="margin:0.25rem 0">
-          <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleVocabTier('newbee')">🟢 ${t('english.newbee')}</button>
-          <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleVocabTier('well-tested')">🟡 ${t('english.wellTested')}</button>
-          <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleVocabTier('mastered')">🔵 ${t('english.mastered')}</button>
+          <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleVocabTier('newbee')">${t('english.newbee')}</button>
+          <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleVocabTier('well-tested')">${t('english.wellTested')}</button>
+          <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleVocabTier('mastered')">${t('english.mastered')}</button>
         </div>
         <div class="tag-filter-group">
           <select class="input" id="tagFilter" onchange="filterByTag(this.value)" style="max-width:140px;font-size:0.85rem">
@@ -396,28 +396,25 @@ function renderVocabList(words) {
 
 function editMeaning(id) {
   try {
-    const el = id => document.getElementById(id);
-    const wordText = el(`wordText-${id}`);
-    const editWord = el(`editWord-${id}`);
-    const meaning = el(`meaning-${id}`);
-    const edit = el(`edit-${id}`);
-    const posText = el(`posText-${id}`);
-    const posEdit = el(`posEdit-${id}`);
-    const editBtn = el(`editBtn-${id}`);
-    const save = el(`save-${id}`);
-    const cancel = el(`cancel-${id}`);
-    if (!wordText || !editWord || !meaning || !edit || !posText || !posEdit || !editBtn || !save || !cancel) {
-      const missing = [];
-      if (!wordText) missing.push('wordText');
-      if (!editWord) missing.push('editWord');
-      if (!meaning) missing.push('meaning');
-      if (!edit) missing.push('edit');
-      if (!posText) missing.push('posText');
-      if (!posEdit) missing.push('posEdit');
-      if (!editBtn) missing.push('editBtn');
-      if (!save) missing.push('save');
-      if (!cancel) missing.push('cancel');
-      showToast('❌ 缺失: ' + missing.join(', '));
+    // Find the button by its ID, then traverse to siblings
+    const btn = document.getElementById(`editBtn-${id}`);
+    if (!btn) { showToast('❌ 找不到編輯按鈕'); return; }
+    const row = btn.closest('.vocab-row');
+    if (!row) { showToast('❌ 找不到詞彙行'); return; }
+    const colWord = row.querySelector('.col-word');
+    if (!colWord) { showToast('❌ 找不到 col-word'); return; }
+    const wordText = colWord.querySelector('.word-text');
+    const editWord = colWord.querySelector('.edit-input');
+    const colMeaning = row.querySelector('.col-meaning');
+    const meaning = colMeaning?.querySelector('.meaning-text');
+    const edit = colMeaning?.querySelector('.edit-input');
+    const colPos = row.querySelector('.col-pos');
+    const posText = colPos?.querySelector('.pos-text');
+    const posEdit = colPos?.querySelector('.pos-edit');
+    const save = document.getElementById(`save-${id}`);
+    const cancel = document.getElementById(`cancel-${id}`);
+    if (!wordText || !editWord || !meaning || !edit || !posText || !posEdit || !save || !cancel) {
+      showToast('❌ DOM結構異常');
       return;
     }
     wordText.classList.add('hidden');
@@ -426,12 +423,12 @@ function editMeaning(id) {
     edit.classList.remove('hidden');
     posText.classList.add('hidden');
     posEdit.classList.remove('hidden');
-    editBtn.style.display = 'none';
+    btn.style.display = 'none';
     save.style.display = 'inline';
     cancel.style.display = 'inline';
     edit.focus();
   } catch(e) {
-    showToast('❌ 編輯錯誤: ' + e.message);
+    showToast('❌ ' + e.message);
   }
 }
 

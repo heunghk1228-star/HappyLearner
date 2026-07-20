@@ -138,9 +138,9 @@ async function showWordSelection(words) {
         <div class="filter-row">
           <label>📊 ${t('english.level')}:</label>
           <div class="tier-filter-btns">
-            <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleRevisionTier('newbee')">🟢 ${t('english.newbee')}</button>
-            <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleRevisionTier('well-tested')">🟡 ${t('english.wellTested')}</button>
-            <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleRevisionTier('mastered')">🔵 ${t('english.mastered')}</button>
+            <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleRevisionTier('newbee')">${t('english.newbee')}</button>
+            <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleRevisionTier('well-tested')">${t('english.wellTested')}</button>
+            <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleRevisionTier('mastered')">${t('english.mastered')}</button>
           </div>
         </div>
       </div>

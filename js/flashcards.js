@@ -436,9 +436,9 @@ async function openFlashcards() {
       <h2>${t('english.flashCards')}</h2>
       <div class="filter-bar" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
         <div class="tier-filter-btns">
-          <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleTierFilter('newbee')">🟢 ${t('english.newbee')}</button>
-          <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleTierFilter('well-tested')">🟡 ${t('english.wellTested')}</button>
-          <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleTierFilter('mastered')">🔵 ${t('english.mastered')}</button>
+          <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleTierFilter('newbee')">${t('english.newbee')}</button>
+          <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleTierFilter('well-tested')">${t('english.wellTested')}</button>
+          <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleTierFilter('mastered')">${t('english.mastered')}</button>
         </select>
         <select id="flashcardTagFilter" onchange="filterFlashcards()" class="input" style="max-width:140px;font-size:0.85rem">
           <option value="">🏷️ ${t('english.all')}</option>
