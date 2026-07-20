@@ -158,6 +158,7 @@ async function showWordSelection(words) {
         <div class="question-count-row">
           <label>📝 題目數量:</label>
           <input type="number" class="input" id="questionCount" value="${words.length}" min="1" max="${words.length}" style="width:80px">
+          <span class="question-count-note">(已選: <span id="maxCount">${words.length}</span>)</span>
         </div>
         <button class="btn btn-primary" onclick="confirmWordSelection()">${t('english.startTest')}</button>
       </div>
