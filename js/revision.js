@@ -1,20 +1,22 @@
 // ============================================================
-// Revision Module — Short-term Memory Test with Filters
+// Revision Module — Test system with Auto & Specify modes
 // ============================================================
 
+let testMode = 'auto'; // 'auto' | 'specify'
 let testWords = [];
 let currentTestIndex = 0;
 let correctCount = 0;
 let testQuestions = [];
 let retryQueue = [];
+let leveledUpWords = [];
 let initialQuestionCount = 0;
 
-// Tier filter state for word selection
+// Tier filter state for word selection (specify mode)
 let revisionActiveTiers = ['newbee', 'well-tested', 'mastered'];
 let revisionTagFilter = '';
 
 // ============================================================
-// Page: Word Selection (entry point)
+// Page: Main entry — show mode selection
 // ============================================================
 
 async function showRevisionPage() {
@@ -32,27 +34,81 @@ async function showRevisionPage() {
     <div class="page-header">
       <h2>${t('english.revisionTitle')}</h2>
     </div>
+    <div class="revision-modes">
+      <div class="mode-card" onclick="startRevision('auto')">
+        <div class="mode-icon">🧠</div>
+        <h3>${t('english.autoMode')}</h3>
+        <p>${t('english.autoModeDesc')}</p>
+      </div>
+      <div class="mode-card" onclick="startRevision('specify')">
+        <div class="mode-icon">🎯</div>
+        <h3>${t('english.specifyMode')}</h3>
+        <p>${t('english.specifyModeDesc')}</p>
+      </div>
+    </div>
     <div id="revisionArea"></div>
   `;
-
-  await showWordSelection();
 }
 
 // ============================================================
-// Word Selection with Tag + Tier Filters
+// Start Revision (called by mode cards)
 // ============================================================
 
-async function showWordSelection() {
-  const area = document.getElementById('revisionArea');
-  if (!area) return;
+async function startRevision(mode) {
+  testMode = mode;
+  currentTestIndex = 0;
+  correctCount = 0;
+  testQuestions = [];
+  retryQueue = [];
+  leveledUpWords = [];
+  initialQuestionCount = 0;
 
   const words = await fetchVocabulary();
   if (!words.length) {
-    area.innerHTML = `<div class="empty-state">${t('common.placeholders')}</div>`;
+    document.getElementById('revisionArea').innerHTML = `
+      <div class="empty-state">${t('common.placeholders')}</div>
+    `;
     return;
   }
 
-  // Load tags for filter dropdown
+  if (mode === 'auto') {
+    // Auto mode: pick 3 newbee, 2 well-tested, 2 mastered
+    const newbee = words.filter(w => w.level <= 2);
+    const wellTested = words.filter(w => w.level >= 3 && w.level <= 5);
+    const mastered = words.filter(w => w.level >= 6);
+
+    shuffleArray(newbee);
+    shuffleArray(wellTested);
+    shuffleArray(mastered);
+
+    testWords = [
+      ...newbee.slice(0, 3),
+      ...wellTested.slice(0, 2),
+      ...mastered.slice(0, 2)
+    ];
+
+    // Fill missing with random words
+    if (testWords.length < 7) {
+      const remaining = words.filter(w => !testWords.find(t => t.id === w.id));
+      shuffleArray(remaining);
+      testWords = [...testWords, ...remaining.slice(0, 7 - testWords.length)];
+    }
+
+    prepareQuestions();
+  } else {
+    // Specify mode: show word selection with filters
+    showWordSelection(words);
+  }
+}
+
+// ============================================================
+// Word Selection with Tag + Tier Filters (specify mode)
+// ============================================================
+
+async function showWordSelection(words) {
+  const area = document.getElementById('revisionArea');
+  if (!area) return;
+
   const tags = await fetchTags();
   const tagOptions = tags.map(t =>
     `<option value="${t.id}">${t.name}</option>`
@@ -87,7 +143,7 @@ async function showWordSelection() {
           <input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll()" checked>
           <strong>${t('english.selectAll')}</strong>
         </label>
-        <span class="selection-count" id="selectionCount">${t('english.totalWords')}: <strong id="selectedCount">${words.length}</strong></span>
+        <span class="selection-count">${t('english.totalWords')}: <strong id="selectedCount">${words.length}</strong></span>
       </div>
 
       <div class="selection-list" id="revisionWordList"></div>
@@ -103,7 +159,6 @@ async function showWordSelection() {
     </div>
   `;
 
-  // Render word list
   renderRevisionWordList(words);
 }
 
@@ -111,13 +166,11 @@ function renderRevisionWordList(words) {
   const list = document.getElementById('revisionWordList');
   if (!list) return;
 
-  // Apply tier filter
   let filtered = words.filter(w => {
     const tier = w.level <= 2 ? 'newbee' : w.level <= 5 ? 'well-tested' : 'mastered';
     return revisionActiveTiers.includes(tier);
   });
 
-  // Apply tag filter
   if (revisionTagFilter) {
     applyRevisionTagFilter(filtered).then(f => {
       filtered = f;
@@ -160,26 +213,22 @@ function renderListItems(filtered, totalCount) {
     `;
   }).join('');
 
-  // Update counts
-  const selected = document.querySelectorAll('#revisionWordList input:checked').length;
-  document.getElementById('selectedCount').textContent = selected;
-  document.getElementById('maxCount').textContent = selected;
-  const qtyInput = document.getElementById('questionCount');
-  qtyInput.max = selected;
-  if (parseInt(qtyInput.value) > selected) qtyInput.value = selected;
-
-  // Update select-all state
+  updateSelectionCount();
   const allChecked = document.querySelectorAll('#revisionWordList input:checked').length === filtered.length;
   selectAll.checked = allChecked && filtered.length > 0;
 }
 
 function updateSelectionCount() {
   const selected = document.querySelectorAll('#revisionWordList input:checked').length;
-  document.getElementById('selectedCount').textContent = selected;
-  document.getElementById('maxCount').textContent = selected;
+  const countEl = document.getElementById('selectedCount');
+  const maxEl = document.getElementById('maxCount');
   const qtyInput = document.getElementById('questionCount');
-  qtyInput.max = selected;
-  if (parseInt(qtyInput.value) > selected) qtyInput.value = selected;
+  if (countEl) countEl.textContent = selected;
+  if (maxEl) maxEl.textContent = selected;
+  if (qtyInput) {
+    qtyInput.max = selected;
+    if (parseInt(qtyInput.value) > selected) qtyInput.value = selected;
+  }
 }
 
 function toggleSelectAll() {
@@ -197,7 +246,6 @@ function toggleRevisionTier(tier) {
     revisionActiveTiers.push(tier);
     document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.add('active');
   }
-  // Re-render
   fetchVocabulary().then(words => renderRevisionWordList(words));
 }
 
@@ -207,7 +255,7 @@ function onRevisionFilterChange() {
 }
 
 // ============================================================
-// Start Test
+// Confirm Word Selection (specify mode)
 // ============================================================
 
 function confirmWordSelection() {
@@ -223,11 +271,11 @@ function confirmWordSelection() {
     return;
   }
 
-  // Reset state
   currentTestIndex = 0;
   correctCount = 0;
   testQuestions = [];
   retryQueue = [];
+  leveledUpWords = [];
   initialQuestionCount = 0;
 
   testWords = [];
@@ -236,12 +284,15 @@ function confirmWordSelection() {
     testWords.push(wordData);
   });
 
-  // Shuffle and pick question count
   shuffleArray(testWords);
   testWords = testWords.slice(0, qty);
 
   prepareQuestions();
 }
+
+// ============================================================
+// Prepare Questions (both modes)
+// ============================================================
 
 function prepareQuestions() {
   testQuestions = [];
@@ -273,11 +324,9 @@ function showQuestion() {
   // If all initial questions done, check retry queue
   if (currentTestIndex >= testQuestions.length) {
     if (retryQueue.length > 0) {
-      // Retry phase: use retryQueue as new questions
       testQuestions = retryQueue;
       retryQueue = [];
       currentTestIndex = 0;
-      // Show retry header
     } else {
       finishTest();
       return;
@@ -307,7 +356,6 @@ function showQuestion() {
     </div>
   `;
 
-  // Auto-speak for spelling questions
   if (q.type === 'spelling') {
     setTimeout(() => speakWord(q.word.word, getSlowRate()), 500);
   }
@@ -458,6 +506,18 @@ function submitAnswer() {
     resultArea.innerHTML = `<div class="result-correct">${t('english.correct')}</div>`;
     playClapSound();
 
+    // Auto mode: level up (max 1 level per day, skip if hinted)
+    if (testMode === 'auto' && q.word.level < 6 && !q.hinted) {
+      const today = new Date().toISOString().split('T')[0];
+      if (q.word.last_reviewed !== today) {
+        const oldLevel = q.word.level;
+        const newLevel = Math.min(q.word.level + 1, 6);
+        updateWordLevel(q.word.id, newLevel);
+        q.word.level = newLevel;
+        leveledUpWords.push({ word: q.word.word, oldLevel, newLevel });
+      }
+    }
+
     if (!q.isRetry) {
       correctCount++;
     }
@@ -468,12 +528,18 @@ function submitAnswer() {
       </div>
     `;
 
+    // Auto mode: down level
+    if (testMode === 'auto' && q.word.level > 1) {
+      const newLevel = Math.max(q.word.level - 1, 1);
+      updateWordLevel(q.word.id, newLevel);
+      q.word.level = newLevel;
+    }
+
     // Add to retry queue (only for non-retry questions)
     if (!q.isRetry) {
       const retryQ = { ...q, isRetry: true };
       retryQueue.push(retryQ);
     }
-    // If it's already a retry and wrong → drop it (no more retries)
   }
 
   input.disabled = true;
@@ -499,7 +565,6 @@ function finishTest() {
   const earnedGem = correctCount > 5;
   const pct = Math.round((correctCount / initialQuestionCount) * 100);
 
-  // Auto check-in
   if (initialQuestionCount >= 7) {
     doCheckIn().catch(() => {});
   }
@@ -538,6 +603,18 @@ function finishTest() {
       </div>
       <div class="encouragement">${encouragement}</div>
       ${earnedGem ? `<div class="gem-earned">💎 ${t('english.gemsEarned')}</div>` : `<div class="no-gem">${t('english.noGems')}</div>`}
+      ${leveledUpWords.length > 0 ? `
+        <div class="leveled-up-section">
+          <div class="leveled-up-title">⬆️ 升級字詞</div>
+          <div class="leveled-up-list">
+            ${leveledUpWords.map(lw => {
+              const oldLabel = getTierLabel(lw.oldLevel);
+              const newLabel = getTierLabel(lw.newLevel);
+              return `<div class="leveled-up-item"><strong>${lw.word}</strong> ${oldLabel} → ${newLabel}</div>`;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
       <div class="test-actions">
         <button class="btn btn-primary" onclick="showRevisionPage()">🔄 ${t('english.startTest')}</button>
         <button class="btn btn-outline" onclick="showEnglishPage()">${t('english.back')}</button>
