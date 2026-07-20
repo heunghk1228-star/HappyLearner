@@ -150,7 +150,6 @@ async function showWordSelection(words) {
           <input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll()">
           <strong>${t('english.selectAll')}</strong>
         </label>
-        <span class="selection-count">${t('english.totalWords')}: <strong id="selectedCount">${words.length}</strong></span>
       </div>
 
       <div class="selection-list" id="revisionWordList"></div>
@@ -159,7 +158,7 @@ async function showWordSelection(words) {
         <div class="question-count-row">
           <label>📝 題目數量:</label>
           <input type="number" class="input" id="questionCount" value="${words.length}" min="1" max="${words.length}" style="width:80px">
-          <span class="question-count-note">(${t('english.totalWords')}: <span id="maxCount">${words.length}</span>)</span>
+          <span class="question-count-note">(已選: <span id="maxCount">${words.length}</span>)</span>
         </div>
         <button class="btn btn-primary" onclick="confirmWordSelection()">${t('english.startTest')}</button>
       </div>
@@ -239,11 +238,9 @@ function onRevisionCheckChange(el, id) {
 
 function updateSelectionCount(visibleCount) {
   const selected = document.querySelectorAll('#revisionWordList input:checked').length;
-  const countEl = document.getElementById('selectedCount');
   const maxEl = document.getElementById('maxCount');
   const qtyInput = document.getElementById('questionCount');
-  if (countEl) countEl.textContent = selected;
-  if (maxEl) maxEl.textContent = visibleCount;
+  if (maxEl) maxEl.textContent = selected;
   if (qtyInput) {
     qtyInput.max = selected;
     if (parseInt(qtyInput.value) > selected) qtyInput.value = selected;
