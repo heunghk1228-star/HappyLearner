@@ -1854,6 +1854,14 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
+/* Speech controls group (speed + voice + test) */
+.speech-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
 /* Speech speed in settings page */
 .speech-speed-setting {
   display: flex;

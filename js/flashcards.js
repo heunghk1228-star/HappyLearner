@@ -348,7 +348,31 @@ function updateSpeechSpeed(value) {
 }
 
 function testSpeechVoice() {
-  speakWord('Hello, this is a test. The quick brown fox jumps over the lazy dog.');
+  // Speak at the current speed setting so user can hear the effect
+  const speed = getSpeechRate();
+  const word = speed < 0.5 ? 'Hello. This is a slow test.' : 
+               speed < 0.8 ? 'Hello. This is a normal test.' : 
+               'Hello. This is a fast test.';
+  speakWord(word);
+}
+
+function populateVoiceSelector() {
+  const sel = document.getElementById('voiceSelector');
+  if (!sel) return;
+  const preferred = getSpeechVoice();
+  const englishVoices = availableVoices.filter(v => v.lang.startsWith('en'));
+  sel.innerHTML = `<option value="">${t('english.autoVoice')}</option>` +
+    englishVoices.map(v => 
+      `<option value="${v.name}" ${v.name === preferred ? 'selected' : ''}>${v.name.replace('Microsoft ', '')}</option>`
+    ).join('');
+}
+
+function selectVoice(voiceName) {
+  setSpeechVoice(voiceName);
+  // Test the selected voice
+  if (voiceName) {
+    speakWord('Hello, this is my new voice.');
+  }
 }
 
 // ============================================================
@@ -407,20 +431,25 @@ async function openFlashcards() {
           <option value="well-tested">${t('english.wellTested')}</option>
           <option value="mastered">${t('english.mastered')}</option>
         </select>
-        <div class="speech-speed-control">
-          <span class="speed-label">🔊</span>
-          <input type="range" id="speechSpeedSlider" min="0.3" max="1.0" step="0.05" value="${getSpeechRate()}"
-                 oninput="updateSpeechSpeed(this.value)" style="width:80px;vertical-align:middle">
-          <span class="speed-value" id="speedValue">${Math.round(getSpeechRate() * 100)}%</span>
-          <button class="btn-icon" onclick="testSpeechVoice()" title="${t('english.testVoice')}">🎤</button>
+        <div class="speech-controls">
+          <div class="speech-speed-control">
+            <span class="speed-label">🔊</span>
+            <input type="range" id="speechSpeedSlider" min="0.3" max="1.0" step="0.05" value="${getSpeechRate()}"
+                   oninput="updateSpeechSpeed(this.value)" style="width:80px;vertical-align:middle">
+            <span class="speed-value" id="speedValue">${Math.round(getSpeechRate() * 100)}%</span>
+          </div>
+          <select id="voiceSelector" class="input" style="max-width:160px;font-size:0.8rem" onchange="selectVoice(this.value)">
+            <option value="">${t('english.autoVoice')}</option>
+          </select>
+          <button class="btn btn-sm btn-outline" onclick="testSpeechVoice()" title="${t('english.testVoice')}">🎤</button>
         </div>
       </div>
     </div>
     <div id="flashcardContainer"></div>
   `;
 
-  // Init voices on first load
-  initVoices();
+  // Init voices on first load and populate voice selector
+  initVoices().then(() => populateVoiceSelector());
 
   currentFlashcards = words;
   renderFlashcards(words);
