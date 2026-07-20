@@ -361,10 +361,7 @@ function renderVocabList(words) {
     
     return `
       <div class="vocab-row" data-id="${wid}">
-        <span class="col-word">
-          <span class="word-text" id="wordText-${wid}"><strong>${wword}</strong></span>
-          <input class="input edit-input hidden" id="editWord-${wid}" value="${wword}">
-        </span>
+        <span class="col-word"><strong>${wword}</strong></span>
         <span class="col-meaning">
           <span class="meaning-text" id="meaning-${wid}">${wmeaning}</span>
           <input class="input edit-input hidden" id="edit-${wid}" value="${wmeaning}">
@@ -395,70 +392,40 @@ function renderVocabList(words) {
 }
 
 function editMeaning(id) {
-  const btn = document.getElementById(`editBtn-${id}`);
-  if (!btn) return;
-  const row = btn.closest('.vocab-row');
-  if (!row) return;
-  
-  // Get current values from the DOM
-  const wordEl = row.querySelector('.col-word strong');
-  const meaningEl = row.querySelector('.col-meaning .meaning-text');
-  if (!wordEl) return;
-  
-  const oldWord = wordEl.textContent;
-  const oldMeaning = meaningEl ? meaningEl.textContent : '';
-  
-  // Prompt for new word
-  const newWord = prompt('修改英文詞彙:', oldWord);
-  if (!newWord || !newWord.trim() || newWord.trim() === oldWord) return;
-  
-  // Prompt for new meaning
-  const newMeaning = prompt('修改中文意思:', oldMeaning || '');
-  if (newMeaning === null) return;
-  
-  // Save to database
-  saveWordEdit(id, newWord.trim().toLowerCase(), newMeaning.trim());
-}
-
-async function saveWordEdit(id, newWord, newMeaning) {
-  try {
-    await updateWordEntry(id, { word: newWord, chinese_meaning: newMeaning || '' });
-    // Update DOM
-    const row = document.querySelector(`.vocab-row[data-id="${CSS.escape(id)}"]`);
-    if (row) {
-      const wordEl = row.querySelector('.col-word strong');
-      const meaningEl = row.querySelector('.col-meaning .meaning-text');
-      if (wordEl) wordEl.textContent = newWord;
-      if (meaningEl) meaningEl.textContent = newMeaning || '';
-    }
-    showToast('✅ 已更新');
-  } catch(e) {
-    showToast('❌ ' + e.message);
-  }
+  const meaning = document.getElementById(`meaning-${id}`);
+  const edit = document.getElementById(`edit-${id}`);
+  const posText = document.getElementById(`posText-${id}`);
+  const posEdit = document.getElementById(`posEdit-${id}`);
+  const editBtn = document.getElementById(`editBtn-${id}`);
+  const save = document.getElementById(`save-${id}`);
+  const cancel = document.getElementById(`cancel-${id}`);
+  if (!meaning || !edit || !posText || !posEdit || !editBtn || !save || !cancel) return;
+  meaning.classList.add('hidden');
+  edit.classList.remove('hidden');
+  posText.classList.add('hidden');
+  posEdit.classList.remove('hidden');
+  editBtn.style.display = 'none';
+  save.style.display = 'inline';
+  cancel.style.display = 'inline';
+  edit.focus();
 }
 
 async function saveMeaning(id) {
   try {
-    const wordInput = document.getElementById(`editWord-${id}`);
-    const input = document.getElementById(`edit-${id}`);
-    if (!wordInput || !input) { showToast('❌ 儲存錯誤: 找不到輸入欄位'); return; }
-    const newWord = wordInput.value.trim().toLowerCase();
-    const newMeaning = input.value.trim();
+    const edit = document.getElementById(`edit-${id}`);
     const posChecks = document.querySelectorAll(`#posEdit-${id} input:checked`);
+    if (!edit) return;
+    const newMeaning = edit.value.trim();
     const newPOS = Array.from(posChecks).map(cb => cb.value).join(',');
     const updates = {};
-    if (newWord) updates.word = newWord;
-    if (newMeaning) updates.chinese_meaning = newMeaning;
+    if (newMeaning !== undefined) updates.chinese_meaning = newMeaning;
     if (newPOS) updates.part_of_speech = newPOS;
     await updateWordEntry(id, updates);
     
-    document.getElementById(`wordText-${id}`).innerHTML = `<strong>${newWord}</strong>`;
     document.getElementById(`meaning-${id}`).textContent = newMeaning;
     const posLabels = newPOS.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
     document.getElementById(`posText-${id}`).textContent = posLabels;
     
-    document.getElementById(`wordText-${id}`).classList.remove('hidden');
-    document.getElementById(`editWord-${id}`).classList.add('hidden');
     document.getElementById(`meaning-${id}`).classList.remove('hidden');
     document.getElementById(`edit-${id}`).classList.add('hidden');
     document.getElementById(`posText-${id}`).classList.remove('hidden');
@@ -474,34 +441,24 @@ async function saveMeaning(id) {
 }
 
 function cancelEdit(id) {
-  try {
-    const wordText = document.getElementById(`wordText-${id}`);
-    const editWord = document.getElementById(`editWord-${id}`);
-    const meaning = document.getElementById(`meaning-${id}`);
-    const edit = document.getElementById(`edit-${id}`);
-    const posText = document.getElementById(`posText-${id}`);
-    const posEdit = document.getElementById(`posEdit-${id}`);
-    const editBtn = document.getElementById(`editBtn-${id}`);
-    const save = document.getElementById(`save-${id}`);
-    const cancel = document.getElementById(`cancel-${id}`);
-    if (!wordText || !editWord || !meaning || !edit || !posText || !posEdit || !editBtn || !save || !cancel) return;
-    wordText.classList.remove('hidden');
-    editWord.classList.add('hidden');
-    meaning.classList.remove('hidden');
-    edit.classList.add('hidden');
-    posText.classList.remove('hidden');
-    posEdit.classList.add('hidden');
-    editBtn.style.display = 'inline';
-    save.style.display = 'none';
-    cancel.style.display = 'none';
-  } catch(e) { /* silent */ }
+  document.getElementById(`meaning-${id}`).classList.remove('hidden');
+  document.getElementById(`edit-${id}`).classList.add('hidden');
+  document.getElementById(`posText-${id}`).classList.remove('hidden');
+  document.getElementById(`posEdit-${id}`).classList.add('hidden');
+  document.getElementById(`editBtn-${id}`).style.display = 'inline';
+  document.getElementById(`save-${id}`).style.display = 'none';
+  document.getElementById(`cancel-${id}`).style.display = 'none';
 }
+
+// ============================================================
+// Delete Word
+// ============================================================
 
 async function deleteVocabWord(id) {
   if (!confirm(t('english.delete') + '?')) return;
   try {
     await deleteWord(id);
-    document.querySelector(`.vocab-row[data-id="${id}"]`).remove();
+    document.querySelector(`.vocab-row[data-id="${id}"]`)?.remove();
     showToast('🗑️ ' + t('english.delete'));
   } catch (e) {
     showToast('❌ ' + e.message);
