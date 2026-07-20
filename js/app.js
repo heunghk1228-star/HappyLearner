@@ -1439,12 +1439,20 @@ async function openAccountSettings() {
       <div class="settings-section">
         <label>🔊 ${t('english.speechSpeed')}</label>
         <div class="speech-speed-setting">
-          <span>${t('english.slow')}</span>
-          <input type="range" id="settingSpeechSpeed" min="0.3" max="1.0" step="0.05" value="${getSpeechRate()}"
-                 oninput="document.getElementById('settingSpeedVal').textContent = Math.round(this.value * 100) + '%'">
-          <span>${t('english.fast')}</span>
-          <span class="speed-value" id="settingSpeedVal">${Math.round(getSpeechRate() * 100)}%</span>
-          <button class="btn btn-sm btn-outline" onclick="speakWord('Hello, test one two three')">🎤 ${t('english.testVoice')}</button>
+          <div class="speed-row">
+            <span>🐢 ${t('english.slow')}</span>
+            <input type="range" id="settingSlowRate" min="0.2" max="0.7" step="0.05" value="${getSlowRate()}"
+                   oninput="document.getElementById('settingSlowVal').textContent = Math.round(this.value * 100) + '%'">
+            <span class="speed-value" id="settingSlowVal">${Math.round(getSlowRate() * 100)}%</span>
+            <button class="btn btn-sm btn-outline" onclick="speakWord('Hello, slow test.', getSlowRate())">🎤</button>
+          </div>
+          <div class="speed-row">
+            <span>🐇 ${t('english.fast')}</span>
+            <input type="range" id="settingFastRate" min="0.6" max="1.2" step="0.05" value="${getFastRate()}"
+                   oninput="document.getElementById('settingFastVal').textContent = Math.round(this.value * 100) + '%'">
+            <span class="speed-value" id="settingFastVal">${Math.round(getFastRate() * 100)}%</span>
+            <button class="btn btn-sm btn-outline" onclick="speakWord('Hello, fast test.', getFastRate())">🎤</button>
+          </div>
         </div>
       </div>
       
@@ -1476,11 +1484,11 @@ async function saveAccountSettings() {
   const avatarUrl = document.getElementById('settingAvatarUrl').value.trim();
   if (avatarUrl) fields.avatar_url = avatarUrl;
   
-  // Save speech speed locally
-  const speedSlider = document.getElementById('settingSpeechSpeed');
-  if (speedSlider) {
-    setSpeechRate(parseFloat(speedSlider.value));
-  }
+  // Save speech speeds locally
+  const slowSlider = document.getElementById('settingSlowRate');
+  if (slowSlider) setSlowRate(parseFloat(slowSlider.value));
+  const fastSlider = document.getElementById('settingFastRate');
+  if (fastSlider) setFastRate(parseFloat(fastSlider.value));
   
   try {
     await updateProfile(fields);

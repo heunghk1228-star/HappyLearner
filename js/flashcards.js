@@ -165,7 +165,8 @@ function renderMiniCard(word) {
       <div class="grid-card-inner">
         <div class="grid-card-front">
           <div class="grid-word">${word.word}</div>
-          <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWord('${word.word}')" title="${t('english.pronunciation')}">🔊</button>
+          <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordSlow('${word.word}')" title="🐢 ${t('english.slow')}">🐢</button>
+          <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordFast('${word.word}')" title="🐇 ${t('english.fast')}">🐇</button>
           <div class="grid-tier">${tierLabel}</div>
         </div>
         <div class="grid-card-back">
@@ -201,13 +202,20 @@ function prevPage() {
 // Pronunciation — Speak Word with voice selection
 // ============================================================
 
-// Get stored speech rate from localStorage
-function getSpeechRate() {
-  return parseFloat(localStorage.getItem('speechRate')) || 0.65;
+// Get stored speech rates from localStorage
+function getSlowRate() {
+  const val = parseFloat(localStorage.getItem('speechSlowRate'));
+  return val >= 0.1 && val <= 1.0 ? val : 0.5;
 }
-
-function setSpeechRate(rate) {
-  localStorage.setItem('speechRate', rate.toString());
+function setSlowRate(rate) {
+  localStorage.setItem('speechSlowRate', rate.toString());
+}
+function getFastRate() {
+  const val = parseFloat(localStorage.getItem('speechFastRate'));
+  return val >= 0.1 && val <= 1.0 ? val : 0.9;
+}
+function setFastRate(rate) {
+  localStorage.setItem('speechFastRate', rate.toString());
 }
 
 // Get preferred voice name
@@ -285,7 +293,7 @@ function pickBestVoice() {
   return availableVoices[0] || null;
 }
 
-function speakWord(word) {
+function speakWord(word, rate) {
   if (!('speechSynthesis' in window)) {
     showToast('🔇 ' + (t('english.speechUnavailable') || 'Speech not available on this device'));
     return;
@@ -296,10 +304,10 @@ function speakWord(word) {
   
   if (!word) return;
   
-  const rate = getSpeechRate();
+  const speechRate = rate != null ? rate : getSlowRate();
   const utterance = new SpeechSynthesisUtterance(word);
   utterance.lang = 'en-US';
-  utterance.rate = rate;
+  utterance.rate = speechRate;
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
   
@@ -339,25 +347,17 @@ function speakWord(word) {
   }
 }
 
-let speechSpeedDebounce = null;
+function speakWordSlow(word) {
+  speakWord(word, getSlowRate());
+}
 
-function updateSpeechSpeed(value) {
-  const rate = parseFloat(value);
-  setSpeechRate(rate);
-  document.getElementById('speedValue').textContent = Math.round(rate * 100) + '%';
-  // Debounce — Chrome speechSynthesis locks up if cancel/speak cycles
-  // happen too fast (known Chrome bug). Only speak after user stops dragging.
-  clearTimeout(speechSpeedDebounce);
-  speechSpeedDebounce = setTimeout(() => speakWord('Hello'), 350);
+function speakWordFast(word) {
+  speakWord(word, getFastRate());
 }
 
 function testSpeechVoice() {
-  // Speak at the current speed setting so user can hear the effect
-  const speed = getSpeechRate();
-  const word = speed < 0.5 ? 'Hello. This is a slow test.' : 
-               speed < 0.8 ? 'Hello. This is a normal test.' : 
-               'Hello. This is a fast test.';
-  speakWord(word);
+  // Speak at the slow speed setting so user can hear the effect
+  speakWord('Hello. This is a test.', getSlowRate());
 }
 
 function populateVoiceSelector() {
@@ -439,12 +439,6 @@ async function openFlashcards() {
           <option value="">🏷️ ${t('english.all')}</option>
         </select>
         <div class="speech-controls">
-          <div class="speech-speed-control">
-            <span class="speed-label">🔊</span>
-            <input type="range" id="speechSpeedSlider" min="0.3" max="1.0" step="0.05" value="${getSpeechRate()}"
-                   oninput="updateSpeechSpeed(this.value)" style="width:80px;vertical-align:middle">
-            <span class="speed-value" id="speedValue">${Math.round(getSpeechRate() * 100)}%</span>
-          </div>
           <select id="voiceSelector" class="input" style="max-width:160px;font-size:0.8rem" onchange="selectVoice(this.value)">
             <option value="">${t('english.autoVoice')}</option>
           </select>

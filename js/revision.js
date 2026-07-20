@@ -182,7 +182,7 @@ function showQuestion() {
   
   // Auto-speak for spelling questions
   if (q.type === 'spelling') {
-    setTimeout(() => speakWord(q.word.word), 500);
+    setTimeout(() => speakWord(q.word.word, getSlowRate()), 500);
   }
 }
 
@@ -190,7 +190,10 @@ function renderSpellingQuestion(q) {
   const word = q.word.word;
   return `
     <div class="question-type">${t('english.listenAndType')}</div>
-    <div class="sound-btn-large" onclick="speakWord('${word}')">🔊</div>
+    <div class="sound-btns-row">
+      <button class="sound-btn-large" onclick="speakWordSlow('${word}')" title="🐢 ${t('english.slow')}">🐢</button>
+      <button class="sound-btn-large" onclick="speakWordFast('${word}')" title="🐇 ${t('english.fast')}">🐇</button>
+    </div>
     <div class="question-word-hint">
       <small>${q.word.chinese_meaning || ''}</small>
     </div>
