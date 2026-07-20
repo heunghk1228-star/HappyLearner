@@ -1401,11 +1401,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function openAccountSettings() {
   document.getElementById('userDropdown').classList.add('hidden');
-  navigateTo('english', true);
+  // Update hash without triggering full navigation
+  if (window.location.hash !== '#english/settings') {
+    history.pushState({}, '', '#english/settings');
+  }
   showLoading();
   const profile = await getProfile();
   
-  const content = document.getElementById('englishContent');
+  const content = document.getElementById('pageContent');
   content.innerHTML = `
     <div class="settings-page">
       <h3>⚙️ 帳戶設定</h3>
