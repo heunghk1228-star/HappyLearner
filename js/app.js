@@ -379,9 +379,9 @@ function renderVocabList(words) {
                 <span class="level-badge level-${w.level}">${tierLabel}</span>
               </span>
               <span class="col-actions">
-                <button class="btn-icon" onclick="editMeaning(this)" id="editBtn-${w.id}" title="✏️">✏️</button>
-                <button class="btn-icon" onclick="saveMeaning(this)" id="save-${w.id}" style="display:none" title="💾">💾</button>
-                <button class="btn-icon" onclick="cancelEdit(this)" id="cancel-${w.id}" style="display:none" title="❌">❌</button>
+                <button class="btn-icon" onclick="editMeaning('${w.id}')" id="editBtn-${w.id}" title="✏️">✏️</button>
+                <button class="btn-icon" onclick="saveMeaning('${w.id}')" id="save-${w.id}" style="display:none" title="💾">💾</button>
+                <button class="btn-icon" onclick="cancelEdit('${w.id}')" id="cancel-${w.id}" style="display:none" title="❌">❌</button>
                 <button class="btn-icon" onclick="deleteVocabWord('${w.id}')" title="🗑️">🗑️</button>
               </span>
             </div>
@@ -389,10 +389,7 @@ function renderVocabList(words) {
   }).join('');
 }
 
-function editMeaning(btn) {
-  const row = btn.closest('.vocab-row');
-  if (!row) return;
-  const id = row.dataset.id;
+function editMeaning(id) {
   document.getElementById(`wordText-${id}`).classList.add('hidden');
   document.getElementById(`editWord-${id}`).classList.remove('hidden');
   document.getElementById(`meaning-${id}`).classList.add('hidden');
@@ -405,10 +402,7 @@ function editMeaning(btn) {
   document.getElementById(`edit-${id}`).focus();
 }
 
-async function saveMeaning(btn) {
-  const row = btn.closest('.vocab-row');
-  if (!row) return;
-  const id = row.dataset.id;
+async function saveMeaning(id) {
   const wordInput = document.getElementById(`editWord-${id}`);
   const input = document.getElementById(`edit-${id}`);
   const newWord = wordInput.value.trim().toLowerCase();
@@ -422,13 +416,11 @@ async function saveMeaning(btn) {
     if (newPOS) updates.part_of_speech = newPOS;
     await updateWordEntry(id, updates);
     
-    // Update DOM directly
     document.getElementById(`wordText-${id}`).innerHTML = `<strong>${newWord}</strong>`;
     document.getElementById(`meaning-${id}`).textContent = newMeaning;
     const posLabels = newPOS.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
     document.getElementById(`posText-${id}`).textContent = posLabels;
     
-    // Exit edit mode
     document.getElementById(`wordText-${id}`).classList.remove('hidden');
     document.getElementById(`editWord-${id}`).classList.add('hidden');
     document.getElementById(`meaning-${id}`).classList.remove('hidden');
@@ -445,10 +437,7 @@ async function saveMeaning(btn) {
   }
 }
 
-function cancelEdit(btn) {
-  const row = btn.closest('.vocab-row');
-  if (!row) return;
-  const id = row.dataset.id;
+function cancelEdit(id) {
   document.getElementById(`wordText-${id}`).classList.remove('hidden');
   document.getElementById(`editWord-${id}`).classList.add('hidden');
   document.getElementById(`meaning-${id}`).classList.remove('hidden');
