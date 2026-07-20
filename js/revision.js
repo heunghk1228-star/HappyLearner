@@ -15,6 +15,7 @@ let initialQuestionCount = 0;
 let revisionActiveTiers = ['newbee', 'well-tested', 'mastered'];
 let revisionTagFilter = '';
 let revisionSelectedIds = new Set(); // Track checked word IDs across filter changes
+let revisionWordData = {}; // id -> word object for selected words
 
 // ============================================================
 // Page: Main entry — show mode selection
@@ -153,20 +154,22 @@ async function showWordSelection(words) {
       <div class="selection-list" id="revisionWordList"></div>
 
       <div class="selection-bottom">
-        <div class="question-count-row">
-          <label>📝 題目數量:</label>
-          <input type="number" class="input" id="questionCount" value="${words.length}" min="1" max="${words.length}" style="width:80px">
-          <span class="question-count-note">(已選: <span id="maxCount">${words.length}</span>)</span>
-        </div>
-        <button class="btn btn-primary" onclick="confirmWordSelection()">${t('english.startTest')}</button>
-      </div>
+              <div class="question-count-row">
+                <label>📝 題目數量:</label>
+                <input type="number" class="input" id="questionCount" value="${words.length}" min="1" max="${words.length}" style="width:80px" oninput="golUpdateStartBtn()">
+                <span class="question-count-note">(已選: <span id="maxCount">${words.length}</span>)</span>
+              </div>
+              <button class="btn btn-primary" id="golStartBtn" onclick="confirmWordSelection()">${t('english.startTest')}</button>
+            </div>
     </div>
   `;
 
   renderRevisionWordList(words);
-  // Reset selection tracking
-  revisionSelectedIds = new Set();
-}
+    // Reset selection tracking (BEFORE rendering so counts are correct)
+    revisionSelectedIds = new Set();
+    revisionWordData = {};
+    updateSelectionCount(0);
+  }
 
 function renderRevisionWordList(words) {
   const list = document.getElementById('revisionWordList');
@@ -208,6 +211,9 @@ function renderListItems(filtered, totalCount) {
   const list = document.getElementById('revisionWordList');
   const selectAll = document.getElementById('selectAllCheck');
 
+  // Store word data for all visible words
+  filtered.forEach(w => { if (w.id) revisionWordData[w.id] = w; });
+
   list.innerHTML = filtered.map(w => {
     const tier = w.level <= 2 ? 'newbee' : w.level <= 5 ? 'well-tested' : 'mastered';
     const tierLabel = getTierLabel(w.level);
@@ -232,14 +238,34 @@ function onRevisionCheckChange(el, id) {
     revisionSelectedIds.delete(id);
   }
   updateSelectionCount(document.querySelectorAll('#revisionWordList label.selection-item').length);
-}
+  }
 
-function updateSelectionCount(visibleCount) {
+  function updateSelectionCount(visibleCount) {
   const totalSelected = revisionSelectedIds.size;
   const qtyInput = document.getElementById('questionCount');
+  const maxEl = document.getElementById('maxCount');
+  if (maxEl) maxEl.textContent = totalSelected;
   if (qtyInput) {
     qtyInput.max = totalSelected;
     if (parseInt(qtyInput.value) > totalSelected) qtyInput.value = totalSelected;
+  }
+  golUpdateStartBtn();
+}
+
+function golUpdateStartBtn() {
+  const btn = document.getElementById('golStartBtn');
+  const qtyInput = document.getElementById('questionCount');
+  if (!btn || !qtyInput) return;
+  const qty = parseInt(qtyInput.value);
+  const total = revisionSelectedIds.size;
+  if (qty < 1 || qty > total) {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
   }
 }
 
@@ -282,30 +308,29 @@ function confirmWordSelection() {
   const modes = document.querySelector('.revision-modes');
   if (modes) modes.style.display = 'none';
 
-  const checked = document.querySelectorAll('#revisionWordList input:checked');
-  if (checked.length === 0) {
+  const totalSelected = revisionSelectedIds.size;
+  if (totalSelected === 0) {
     alert(t('english.filter'));
     return;
   }
-
   const qty = parseInt(document.getElementById('questionCount').value);
-  if (qty < 1 || qty > checked.length) {
-    alert(`${t('english.question')} ${t('english.of')} ${t('english.words')} ${t('english.filter')}`);
-    return;
-  }
+  if (qty < 1 || qty > totalSelected) {
+    alert('題目數量不能超過已選詞彙數');
+        return;
+      }
 
-  currentTestIndex = 0;
+      currentTestIndex = 0;
   correctCount = 0;
   testQuestions = [];
   retryQueue = [];
   leveledUpWords = [];
   initialQuestionCount = 0;
 
-  testWords = [];
-  checked.forEach(cb => {
-    const wordData = JSON.parse(cb.dataset.word);
-    testWords.push(wordData);
-  });
+  // Gather selected words from revisionSelectedIds + revisionWordData
+    testWords = [];
+    revisionSelectedIds.forEach(id => {
+      if (revisionWordData[id]) testWords.push(revisionWordData[id]);
+    });
 
   shuffleArray(testWords);
   testWords = testWords.slice(0, qty);
