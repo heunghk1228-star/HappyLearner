@@ -541,7 +541,6 @@ let activeTiers = ['newbee', 'well-tested', 'mastered'];
 function toggleTierFilter(tier) {
   const idx = activeTiers.indexOf(tier);
   if (idx >= 0) {
-    if (activeTiers.length === 1) return; // Don't deselect last
     activeTiers.splice(idx, 1);
     document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.remove('active');
   } else {
