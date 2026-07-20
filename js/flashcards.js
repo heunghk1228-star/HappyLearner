@@ -359,8 +359,8 @@ function speakWordFast(word) {
 }
 
 function testSpeechVoice() {
-  // Speak at the slow speed setting so user can hear the effect
-  speakWord('Hello. This is a test.', getSlowRate());
+  // Speak at the fast speed setting so user can hear the effect
+  speakWord('Hello. This is a test.', getFastRate());
 }
 
 function populateVoiceSelector() {
@@ -434,11 +434,10 @@ async function openFlashcards() {
     <div class="page-header">
       <h2>${t('english.flashCards')}</h2>
       <div class="filter-bar" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
-        <select id="flashcardFilter" onchange="filterFlashcards()" class="input" style="flex:1;min-width:100px">
-          <option value="all">${t('english.all')} — ${t('english.words')}</option>
-          <option value="newbee">${t('english.newbee')}</option>
-          <option value="well-tested">${t('english.wellTested')}</option>
-          <option value="mastered">${t('english.mastered')}</option>
+        <div class="tier-filter-btns">
+          <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleTierFilter('newbee')">🟢 ${t('english.newbee')}</button>
+          <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleTierFilter('well-tested')">🟡 ${t('english.wellTested')}</button>
+          <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleTierFilter('mastered')">🔵 ${t('english.mastered')}</button>
         </select>
         <select id="flashcardTagFilter" onchange="filterFlashcards()" class="input" style="max-width:140px;font-size:0.85rem">
           <option value="">🏷️ ${t('english.all')}</option>
@@ -459,6 +458,9 @@ async function openFlashcards() {
 
   // Load tag filter
   loadFlashcardTagFilter();
+
+  // Reset tier filter buttons
+  activeTiers = ['newbee', 'well-tested', 'mastered'];
 
   currentFlashcards = words;
   renderFlashcards(words);
@@ -531,21 +533,36 @@ async function regenerateSentence(wordId) {
 function speakSentence(wordId) {
   const word = currentFlashcards.find(w => w.id === wordId);
   if (!word || !word.sample_sentence) return;
-  speakWord(word.sample_sentence, getSlowRate());
+  speakWord(word.sample_sentence, getFastRate());
+}
+
+let activeTiers = ['newbee', 'well-tested', 'mastered'];
+
+function toggleTierFilter(tier) {
+  const idx = activeTiers.indexOf(tier);
+  if (idx >= 0) {
+    if (activeTiers.length === 1) return; // Don't deselect last
+    activeTiers.splice(idx, 1);
+    document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.remove('active');
+  } else {
+    activeTiers.push(tier);
+    document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.add('active');
+  }
+  filterFlashcards();
 }
 
 function filterFlashcards() {
-  const tierFilter = document.getElementById('flashcardFilter').value;
   const tagFilter = document.getElementById('flashcardTagFilter').value;
 
   // Fetch all words first
-  fetchVocabulary().then(async (allWords) => {
+    fetchVocabulary().then(async (allWords) => {
     let words = allWords;
 
-    // Apply tier filter
-    if (tierFilter !== 'all') {
-      words = await getWordsByTier(tierFilter);
-    }
+    // Apply tier filter from active buttons
+    words = words.filter(w => {
+      const tier = w.level <= 2 ? 'newbee' : w.level <= 5 ? 'well-tested' : 'mastered';
+      return activeTiers.includes(tier);
+    });
 
     // Apply tag filter
     if (tagFilter) {
