@@ -359,7 +359,21 @@ async function saveMeaning(id) {
   try {
     await updateWordMeaning(id, newMeaning);
     await updateWordPOS(id, newPOS || 'noun');
-    openVocabularyBook();
+    
+    // Update DOM directly — no full page refresh
+    document.getElementById(`meaning-${id}`).textContent = newMeaning;
+    const posLabels = newPOS.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
+    document.getElementById(`posText-${id}`).textContent = posLabels;
+    
+    // Exit edit mode
+    document.getElementById(`meaning-${id}`).classList.remove('hidden');
+    document.getElementById(`edit-${id}`).classList.add('hidden');
+    document.getElementById(`posText-${id}`).classList.remove('hidden');
+    document.getElementById(`posEdit-${id}`).classList.add('hidden');
+    document.getElementById(`editBtn-${id}`).style.display = 'inline';
+    document.getElementById(`save-${id}`).style.display = 'none';
+    document.getElementById(`cancel-${id}`).style.display = 'none';
+    
     showToast('✅ 已儲存');
   } catch (e) {
     showToast('❌ ' + e.message);
@@ -921,6 +935,32 @@ function updateReviewClassification() {
 async function completeReview() {
   showLoading();
   try {
+    // Re-classify all words first (handles edits like 'banan'→'banana')
+    const allWords = await fetchVocabulary();
+    const existingMap = {};
+    for (const v of allWords) {
+      existingMap[v.word.toLowerCase()] = v;
+    }
+    for (const w of reviewData.words) {
+      const norm = normalizeWord(w.word);
+      const existing = existingMap[norm];
+      w.word = norm;
+      if (existing) {
+        w.status = 'duplicate';
+        w.existingId = existing.id;
+        w.existingData = existing;
+      } else if (!isLikelyValidWord(norm)) {
+        w.status = 'error';
+        w.existingId = null; w.existingData = null;
+      } else if (isLikelyName(norm)) {
+        w.status = 'name';
+        w.existingId = null; w.existingData = null;
+      } else {
+        w.status = 'new';
+        w.existingId = null; w.existingData = null;
+      }
+    }
+    
     const newWords = reviewData.words.filter(w => w.status === 'new');
     const nameWords = reviewData.words.filter(w => w.status === 'name');
     const duplicates = reviewData.words.filter(w => w.status === 'duplicate');
