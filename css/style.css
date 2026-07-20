@@ -1912,6 +1912,31 @@ body {
   min-width: 3rem;
 }
 
+/* Tag filter group in vocab book */
+.tag-filter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  position: relative;
+}
+
+.inline-tag-create {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  white-space: nowrap;
+}
+
 /* ============================================================
    Responsive
    ============================================================ */

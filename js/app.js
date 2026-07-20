@@ -260,9 +260,17 @@ async function openVocabularyBook() {
         <input type="text" class="input search-input" id="vocabSearch" 
                placeholder="${t('english.search')}" 
                oninput="searchVocabList(this.value)">
-        <select class="input" id="tagFilter" onchange="filterByTag(this.value)" style="max-width:150px;font-size:0.85rem">
-          <option value="">🏷️ ${t('english.tags')}</option>
-        </select>
+        <div class="tag-filter-group">
+          <select class="input" id="tagFilter" onchange="filterByTag(this.value)" style="max-width:140px;font-size:0.85rem">
+            <option value="">🏷️ ${t('english.all')}</option>
+          </select>
+          <button class="btn-icon" onclick="showCreateTagInput()" title="${t('english.newTag')}">➕</button>
+          <div class="inline-tag-create hidden" id="inlineTagCreate">
+            <input type="text" class="input" id="inlineTagName" placeholder="${t('english.tagName')}" maxlength="20" style="width:100px;font-size:0.8rem">
+            <button class="btn btn-sm btn-primary" onclick="doCreateInlineTag()">${t('english.add')}</button>
+            <button class="btn btn-sm btn-outline" onclick="document.getElementById('inlineTagCreate').classList.add('hidden')">✕</button>
+          </div>
+        </div>
       </div>
       
       <div class="vocab-list-header">
@@ -391,10 +399,29 @@ async function loadTagFilter() {
   if (!select) return;
   try {
     const tags = await fetchTags();
-    select.innerHTML = `<option value="">🏷️ ${t('english.tags')}</option>` +
+    select.innerHTML = `<option value="">🏷️ ${t('english.all')}</option>` +
       tags.map(t => `<option value="${t.id}">${t.name}</option>`).join('') +
-      `<option value="__untagged">🚫 Untagged</option>`;
+      `<option value="__untagged">🚫 ${t('english.noTag')}</option>`;
   } catch(e) { console.warn('Tag filter load failed:', e); }
+}
+
+async function showCreateTagInput() {
+  document.getElementById('inlineTagCreate').classList.remove('hidden');
+  document.getElementById('inlineTagName').focus();
+}
+
+async function doCreateInlineTag() {
+  const name = document.getElementById('inlineTagName').value.trim();
+  if (!name) return;
+  try {
+    await createTag(name);
+    document.getElementById('inlineTagName').value = '';
+    document.getElementById('inlineTagCreate').classList.add('hidden');
+    await loadTagFilter();
+    showToast(`✅ Tag "${name}" created`);
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
 }
 
 async function filterByTag(tagId) {
