@@ -30,24 +30,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   
   // Load saved language
-  // Load saved language — handled by the lang-opt init below
   const savedLang = localStorage.getItem('lang') || 'zh-TW';
   setLanguage(savedLang);
   
+  let navCurrentPage = null; // Track current navigation page
+  let navTriggered = false; // Set when nav link is clicked (allows re-navigation to parent page)
+  let lastKnownHash = window.location.hash || ''; // Track full hash for back-from-sub-page detection
+
   // Hash-based routing
-  window.addEventListener('hashchange', () => {
-    const page = getCurrentPageFromHash();
-    // navTriggered = user clicked a nav link → always navigate
-    // Otherwise, skip if base page hasn't changed (sub-page navigation)
-    if (page) {
-      if (navTriggered) {
-        navTriggered = false;
-        navigateTo(page, false);
-      } else if (page !== navCurrentPage) {
-        navigateTo(page, false);
+    window.addEventListener('hashchange', () => {
+      const page = getCurrentPageFromHash();
+      const newHash = window.location.hash;
+      if (page) {
+        if (navTriggered) {
+          // User clicked a nav link or back button → always navigate
+          navTriggered = false;
+          lastKnownHash = newHash;
+          navigateTo(page, false);
+        } else if (newHash !== lastKnownHash) {
+          // Hash actually changed — only navigate if not going longer (sub-page)
+          // Sub-page nav (vocab, flashcards, revision) is handled by onclick
+          const newLen = newHash.replace('#', '').split('/').length;
+          const oldLen = lastKnownHash.replace('#', '').split('/').length;
+          lastKnownHash = newHash;
+          if (newLen <= oldLen) {
+            navigateTo(page, false);
+          }
+        }
       }
-    }
-  });
+    });
   
   // Navigate to initial page from hash or default
   const initialPage = getCurrentPageFromHash() || 'about';
@@ -89,8 +100,9 @@ function navigateTo(page, pushHash) {
   if (nav) nav.classList.remove('open');
   
   if (pushHash) {
-      window.location.hash = page;
-    return; // hashchange will trigger navigateTo again with pushHash=false
+        window.location.hash = page;
+        lastKnownHash = '#' + page;
+        return; // hashchange will trigger navigateTo again with pushHash=false
   }
   
   // Update tracking
