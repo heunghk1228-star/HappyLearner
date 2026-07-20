@@ -301,6 +301,11 @@ async function openVocabularyBook() {
         <input type="text" class="input search-input" id="vocabSearch" 
                placeholder="${t('english.search')}" 
                oninput="searchVocabList(this.value)">
+        <div class="tier-filter-btns" style="margin:0.25rem 0">
+          <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleVocabTier('newbee')">🟢 ${t('english.newbee')}</button>
+          <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleVocabTier('well-tested')">🟡 ${t('english.wellTested')}</button>
+          <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleVocabTier('mastered')">🔵 ${t('english.mastered')}</button>
+        </div>
         <div class="tag-filter-group">
           <select class="input" id="tagFilter" onchange="filterByTag(this.value)" style="max-width:140px;font-size:0.85rem">
             <option value="">🏷️ ${t('english.all')}</option>
@@ -351,7 +356,10 @@ function renderVocabList(words) {
     
     return `
       <div class="vocab-row" data-id="${w.id}">
-        <span class="col-word"><strong>${w.word}</strong></span>
+        <span class="col-word">
+          <span class="word-text" id="wordText-${w.id}"><strong>${w.word}</strong></span>
+          <input class="input edit-input hidden" id="editWord-${w.id}" value="${w.word}">
+        </span>
         <span class="col-meaning">
           <span class="meaning-text" id="meaning-${w.id}">${w.chinese_meaning || ''}</span>
           <input class="input edit-input hidden" id="edit-${w.id}" value="${w.chinese_meaning || ''}">
@@ -382,6 +390,8 @@ function renderVocabList(words) {
 }
 
 function editMeaning(id) {
+  document.getElementById(`wordText-${id}`).classList.add('hidden');
+  document.getElementById(`editWord-${id}`).classList.remove('hidden');
   document.getElementById(`meaning-${id}`).classList.add('hidden');
   document.getElementById(`edit-${id}`).classList.remove('hidden');
   document.getElementById(`posText-${id}`).classList.add('hidden');
@@ -393,20 +403,28 @@ function editMeaning(id) {
 }
 
 async function saveMeaning(id) {
+  const wordInput = document.getElementById(`editWord-${id}`);
   const input = document.getElementById(`edit-${id}`);
+  const newWord = wordInput.value.trim().toLowerCase();
   const newMeaning = input.value.trim();
   const posChecks = document.querySelectorAll(`#posEdit-${id} input:checked`);
   const newPOS = Array.from(posChecks).map(cb => cb.value).join(',');
   try {
-    await updateWordMeaning(id, newMeaning);
-    await updateWordPOS(id, newPOS || 'noun');
+    const updates = {};
+    if (newWord) updates.word = newWord;
+    if (newMeaning !== undefined) updates.chinese_meaning = newMeaning;
+    if (newPOS) updates.part_of_speech = newPOS;
+    await updateWordEntry(id, updates);
     
-    // Update DOM directly — no full page refresh
+    // Update DOM directly
+    document.getElementById(`wordText-${id}`).innerHTML = `<strong>${newWord || wordInput.dataset.orig}</strong>`;
     document.getElementById(`meaning-${id}`).textContent = newMeaning;
     const posLabels = newPOS.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
     document.getElementById(`posText-${id}`).textContent = posLabels;
     
     // Exit edit mode
+    document.getElementById(`wordText-${id}`).classList.remove('hidden');
+    document.getElementById(`editWord-${id}`).classList.add('hidden');
     document.getElementById(`meaning-${id}`).classList.remove('hidden');
     document.getElementById(`edit-${id}`).classList.add('hidden');
     document.getElementById(`posText-${id}`).classList.remove('hidden');
@@ -422,6 +440,8 @@ async function saveMeaning(id) {
 }
 
 function cancelEdit(id) {
+  document.getElementById(`wordText-${id}`).classList.remove('hidden');
+  document.getElementById(`editWord-${id}`).classList.add('hidden');
   document.getElementById(`meaning-${id}`).classList.remove('hidden');
   document.getElementById(`edit-${id}`).classList.add('hidden');
   document.getElementById(`posText-${id}`).classList.remove('hidden');
@@ -448,6 +468,7 @@ async function searchVocabList(query) {
 
 // Tag filter for vocab book
 let currentTagFilter = null;
+let vocabActiveTiers = ['newbee', 'well-tested', 'mastered'];
 
 async function loadTagFilter() {
   const select = document.getElementById('tagFilter');
@@ -485,8 +506,27 @@ async function filterByTag(tagId) {
   await applyVocabFilter(query);
 }
 
+function toggleVocabTier(tier) {
+  const idx = vocabActiveTiers.indexOf(tier);
+  if (idx >= 0) {
+    vocabActiveTiers.splice(idx, 1);
+    document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.remove('active');
+  } else {
+    vocabActiveTiers.push(tier);
+    document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.add('active');
+  }
+  const query = document.getElementById('vocabSearch')?.value || '';
+  applyVocabFilter(query);
+}
+
 async function applyVocabFilter(query) {
   let words = await searchVocabulary(query);
+  
+  // Apply tier filter
+  words = words.filter(w => {
+    const tier = w.level <= 2 ? 'newbee' : w.level <= 5 ? 'well-tested' : 'mastered';
+    return vocabActiveTiers.includes(tier);
+  });
   
   // Apply tag filter
   if (currentTagFilter) {
@@ -581,14 +621,17 @@ async function processManualInput() {
     const raw = text.split(/[,\s\n]+/).filter(w => w.trim().length > 0);
     if (!raw.length) { hideLoading(); return; }
     
-    // Lowercase and dedup
+    // Extract words preserving original casing
     const seen = new Set();
     const unique = [];
+    const originalMap = {};
     for (const w of raw) {
       const lower = w.toLowerCase().replace(/[^a-zA-Z]/g, '');
       if (lower.length > 1 && !seen.has(lower)) {
         seen.add(lower);
+        // Preserve original casing (e.g. country names stay capitalized)
         unique.push(lower);
+        originalMap[lower] = w.replace(/[^a-zA-Z]/g, ''); // Keep original case
       }
     }
     if (!unique.length) {
@@ -597,22 +640,22 @@ async function processManualInput() {
       return;
     }
     
-    // Build word objects directly — no AI
+    // Build word objects directly — no AI (preserve original casing)
     const words = unique.map(w => ({
-      original: w, word: w, meaning: '',
+      original: w, word: originalMap[w] || w, meaning: '',
       pos: detectPOS(w).join(','),
       status: 'new', existingId: null, existingData: null,
       tagIds: [], editing: false
     }));
     
-    // Check duplicates against existing vocabulary
+    // Check duplicates against existing vocabulary (use lowercase for lookup)
     const allWords = await fetchVocabulary();
     const existingMap = {};
     for (const v of allWords) {
       existingMap[v.word.toLowerCase()] = v;
     }
     for (const w of words) {
-      const existing = existingMap[w.word];
+      const existing = existingMap[w.word.toLowerCase()];
       if (existing) {
         w.status = 'duplicate';
         w.existingId = existing.id;
