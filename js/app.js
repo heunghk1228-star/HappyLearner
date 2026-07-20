@@ -866,260 +866,65 @@ function showWordReviewPage(words) {
           <input type="text" class="input" id="reviewTagName" placeholder="${t('english.tagName')}" maxlength="20" style="width:120px">
           <button class="btn btn-sm btn-primary" onclick="createReviewTag()">${t('english.add')}</button>
         </div>
-        <span class="review-tag-note">${t('english.tagAllNote')}</span>
       </div>
       
-      <div class="review-columns" id="reviewColumns"></div>
+      <div class="review-word-list" id="reviewWordList"></div>
       
-      <div class="review-actions">
-        <button class="btn btn-outline" onclick="updateReviewClassification()">🔄 ${t('english.update')}</button>
-        <button class="btn btn-primary" onclick="completeReview()">✅ ${t('english.complete')}</button>
+      <div class="review-actions" style="margin-top:1rem">
+        <button class="btn btn-primary" onclick="completeReview()">✅ ${t('english.complete')} (${words.length})</button>
       </div>
     </div>
   `;
   
-  renderReviewColumns();
+  renderReviewWordList();
   loadReviewTagOptions();
 }
 
-function renderReviewColumns() {
-  const errors = reviewData.words.filter(w => w.status === 'error');
-  const names = reviewData.words.filter(w => w.status === 'name');
-  const success = reviewData.words.filter(w => w.status === 'new');
-  const dups = reviewData.words.filter(w => w.status === 'duplicate');
+function renderReviewWordList() {
+  const list = document.getElementById('reviewWordList');
+  if (!list || !reviewData.words) return;
   
-  let html = '';
-  
-  if (errors.length > 0) {
-    html += `
-      <div class="review-col review-col-error">
-        <div class="review-col-header">
-          <span class="review-col-icon">❌</span>
-          <span>${t('english.errorWords')} (${errors.length})</span>
-        </div>
-        <div class="review-col-body">
-          ${errors.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('')}
-        </div>
-      </div>`;
-  }
-  
-  if (names.length > 0) {
-    html += `
-      <div class="review-col review-col-name">
-        <div class="review-col-header">
-          <span class="review-col-icon">👤</span>
-          <span>${t('english.nameWords')} (${names.length})</span>
-        </div>
-        <div class="review-col-body">
-          ${names.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('')}
-        </div>
-      </div>`;
-  }
-  
-  if (success.length > 0) {
-    html += `
-      <div class="review-col review-col-success">
-        <div class="review-col-header">
-          <span class="review-col-icon">✅</span>
-          <span>${t('english.successWords')} (${success.length})</span>
-        </div>
-        <div class="review-col-body">
-          ${success.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('')}
-        </div>
-      </div>`;
-  }
-  
-  if (dups.length > 0) {
-    html += `
-      <div class="review-col review-col-duplicate">
-        <div class="review-col-header">
-          <span class="review-col-icon">⏭️</span>
-          <span>${t('english.duplicateWords')} (${dups.length})</span>
-        </div>
-        <div class="review-col-body">
-          ${dups.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('')}
-        </div>
-      </div>`;
-  }
-  
-  document.getElementById('reviewColumns').innerHTML = html || renderReviewFallback();
-}
-
-function renderReviewFallback() {
-  // If no words matched any status column, show a simple list as fallback
-  if (!reviewData.words || reviewData.words.length === 0) {
-    return '<div class="review-col-empty">No words to review</div>';
-  }
-  return `
-    <div class="review-col review-col-success">
-      <div class="review-col-header">
-        <span class="review-col-icon">📝</span>
-        <span>${t('english.successWords')} (${reviewData.words.length})</span>
-      </div>
-      <div class="review-col-body">
-        ${reviewData.words.map((w, i) => {
-          const idx = reviewData.words.indexOf(w);
-          const posLabels = w.pos ? w.pos.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ') : '';
-          return `
-            <div class="review-word">
-              <div class="review-word-main">
-                <strong class="review-word-text">${w.word}</strong>
-              </div>
-              <div class="review-word-meta">
-                <span class="review-word-meaning">📖 ${w.meaning || '—'}</span>
-                <span class="review-word-pos">🔤 ${posLabels}</span>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function renderReviewWordRow(w, idx) {
-  const posLabels = w.pos ? w.pos.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ') : '';
-  let tagHtml = '';
-  if (w.existingTags && w.existingTags.length > 0) {
-    tagHtml = w.existingTags.map(t => `<span class="tag-badge" style="background:${t.color || '#6366f1'}20;color:${t.color || '#6366f1'}">${t.name}</span>`).join('');
-  }
-  
-  return `
-    <div class="review-word" data-idx="${idx}">
-      <div class="review-word-display" id="reviewDisplay-${idx}">
-        <div class="review-word-main">
-          <strong class="review-word-text">${w.word}</strong>
-        </div>
-        <div class="review-word-meta">
+  list.innerHTML = reviewData.words.map((w, idx) => {
+    const posLabels = w.pos ? w.pos.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ') : '';
+    const statusIcon = w.status === 'duplicate' ? '⏭️' : w.status === 'error' ? '❌' : w.status === 'name' ? '👤' : '✅';
+    return `
+      <div class="review-word-row" data-idx="${idx}">
+        <div class="review-word-info">
+          <span class="review-word-status">${statusIcon}</span>
+          <span class="review-word-word"><strong>${w.word}</strong></span>
           <span class="review-word-meaning">📖 ${w.meaning || '—'}</span>
           <span class="review-word-pos">🔤 ${posLabels}</span>
-          ${tagHtml ? `<span class="review-word-tags">${tagHtml}</span>` : ''}
         </div>
-        <div class="review-word-actions">
-          <button class="btn-icon" onclick="editReviewWord(${idx})" title="${t('english.edit')}">✏️</button>
-          <button class="btn-icon" onclick="deleteReviewWord(${idx})" title="${t('english.delete')}">🗑️</button>
-        </div>
-      </div>
-      
-      <div class="review-word-edit hidden" id="reviewEdit-${idx}">
-        <div class="review-edit-row">
-          <label>${t('english.word')}:</label>
-          <input type="text" class="input" id="reviewEditWord-${idx}" value="${w.word}" style="width:100%">
-        </div>
-        <div class="review-edit-row">
-          <label>${t('english.chineseMeaning')}:</label>
-          <input type="text" class="input" id="reviewEditMeaning-${idx}" value="${w.meaning || ''}" style="width:100%">
-        </div>
-        <div class="review-edit-row">
-          <label>${t('english.partOfSpeech')}:</label>
-          <select class="input" id="reviewEditPOS-${idx}" style="width:100%">
-            ${Object.keys(POS_MAP).map(p => `<option value="${p}" ${w.pos === p ? 'selected' : ''}>${POS_MAP[p]?.[currentLang] || p}</option>`).join('')}
-          </select>
-        </div>
-        <div class="review-edit-actions">
-          <button class="btn btn-sm btn-primary" onclick="saveReviewEdit(${idx})">💾 ${t('english.save')}</button>
-          <button class="btn btn-sm btn-outline" onclick="cancelReviewEdit(${idx})">${t('english.cancel')}</button>
+        <div class="review-word-row-actions">
+          <button class="btn-icon" onclick="editReviewWord(${idx})" title="✏️">✏️</button>
+          <button class="btn-icon" onclick="deleteReviewWord(${idx})" title="🗑️">🗑️</button>
         </div>
       </div>
-    </div>
-  `;
+    `;
+  }).join('');
 }
 
 function editReviewWord(idx) {
-  document.getElementById(`reviewDisplay-${idx}`).classList.add('hidden');
-  document.getElementById(`reviewEdit-${idx}`).classList.remove('hidden');
-}
-
-function saveReviewEdit(idx) {
-  const word = document.getElementById(`reviewEditWord-${idx}`).value.trim().toLowerCase();
-  const meaning = document.getElementById(`reviewEditMeaning-${idx}`).value.trim();
-  const pos = document.getElementById(`reviewEditPOS-${idx}`).value;
-  
-  if (word) {
-    reviewData.words[idx].word = word;
-    reviewData.words[idx].meaning = meaning;
-    reviewData.words[idx].pos = pos;
+  const w = reviewData.words[idx];
+  const newWord = prompt('修改英文詞彙:', w.word);
+  if (newWord && newWord.trim()) {
+    w.word = newWord.trim().toLowerCase();
+    const newMeaning = prompt('修改中文意思:', w.meaning || '');
+    if (newMeaning !== null) w.meaning = newMeaning.trim();
+    renderReviewWordList();
   }
-  
-  document.getElementById(`reviewDisplay-${idx}`).classList.remove('hidden');
-  document.getElementById(`reviewEdit-${idx}`).classList.add('hidden');
-  renderReviewColumns();
-}
-
-function cancelReviewEdit(idx) {
-  document.getElementById(`reviewDisplay-${idx}`).classList.remove('hidden');
-  document.getElementById(`reviewEdit-${idx}`).classList.add('hidden');
 }
 
 function deleteReviewWord(idx) {
   reviewData.words.splice(idx, 1);
-  renderReviewColumns();
-}
-
-function updateReviewClassification() {
-  // Re-classify all words after edits
-  const allPosLabels = Object.keys(POS_MAP);
-  showLoading();
-  
-  // Collect all current word values from the DOM
-  for (let i = 0; i < reviewData.words.length; i++) {
-    const editWord = document.getElementById(`reviewEditWord-${i}`);
-    if (editWord) {
-      const w = editWord.value.trim().toLowerCase();
-      if (w) {
-        const meaning = document.getElementById(`reviewEditMeaning-${i}`).value.trim();
-        const pos = document.getElementById(`reviewEditPOS-${i}`).value;
-        reviewData.words[i].word = w;
-        reviewData.words[i].meaning = meaning;
-        reviewData.words[i].pos = pos;
-      }
-    }
+  // Update the complete button count
+  const btn = document.querySelector('.review-actions .btn-primary');
+  if (btn) btn.textContent = `✅ ${t('english.complete')} (${reviewData.words.length})`;
+  if (reviewData.words.length === 0) {
+    document.getElementById('reviewWordList').innerHTML = '<div class="review-col-empty">沒有詞彙</div>';
+    return;
   }
-  
-  // Re-classify
-  const wordTexts = reviewData.words.map(w => w.word);
-  
-  // Check duplicates
-  fetchVocabulary().then(allWords => {
-    const existingMap = {};
-    for (const v of allWords) {
-      existingMap[v.word.toLowerCase()] = v;
-    }
-    
-    for (const w of reviewData.words) {
-      const norm = normalizeWord(w.word);
-      const existing = existingMap[norm];
-      w.word = norm;
-      
-      if (existing) {
-        w.status = 'duplicate';
-        w.existingId = existing.id;
-        w.existingData = existing;
-        if (!w.meaning) w.meaning = existing.chinese_meaning || '';
-      } else if (!isLikelyValidWord(norm)) {
-        w.status = 'error';
-        w.existingId = null;
-        w.existingData = null;
-        w.existingTags = null;
-      } else if (isLikelyName(norm)) {
-        w.status = 'name';
-        w.existingId = null;
-        w.existingData = null;
-        w.existingTags = null;
-      } else {
-        w.status = 'new';
-        w.existingId = null;
-        w.existingData = null;
-        w.existingTags = null;
-      }
-    }
-    
-    renderReviewColumns();
-    hideLoading();
-  }).catch(e => {
-    hideLoading();
-    showToast('❌ ' + e.message);
-  });
+  renderReviewWordList();
 }
 
 async function completeReview() {
