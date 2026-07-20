@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('hashchange', () => {
     const page = getCurrentPageFromHash();
     // Only navigate if page actually changed (prevents tab-switch re-navigation)
-    if (page && page !== currentPage) {
+    if (page && page !== navCurrentPage) {
       navigateTo(page, false);
     }
   });
@@ -73,11 +73,11 @@ function getCurrentSubPageFromHash() {
 // Navigation
 // ============================================================
 
-let currentPage = null; // Track current page to prevent re-navigation
+let navCurrentPage = null; // Track current navigation page to prevent re-navigation
 
 function navigateTo(page, pushHash) {
   // Guard: skip if we're already on this page (prevents tab-switch re-navigation)
-  if (page === currentPage && !pushHash) return;
+  if (page === navCurrentPage && !pushHash) return;
   
   // Close mobile menu
   const nav = document.getElementById('mainNav');
@@ -90,7 +90,7 @@ function navigateTo(page, pushHash) {
   }
   
   // Update tracking
-  currentPage = page;
+  navCurrentPage = page;
   
   // Update active nav link
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
