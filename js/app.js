@@ -36,7 +36,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Hash-based routing
   window.addEventListener('hashchange', () => {
     const page = getCurrentPageFromHash();
-    navigateTo(page, false);
+    // Only navigate if page actually changed (prevents tab-switch re-navigation)
+    if (page && page !== currentPage) {
+      navigateTo(page, false);
+    }
   });
   
   // Navigate to initial page from hash or default
@@ -70,7 +73,12 @@ function getCurrentSubPageFromHash() {
 // Navigation
 // ============================================================
 
+let currentPage = null; // Track current page to prevent re-navigation
+
 function navigateTo(page, pushHash) {
+  // Guard: skip if we're already on this page (prevents tab-switch re-navigation)
+  if (page === currentPage && !pushHash) return;
+  
   // Close mobile menu
   const nav = document.getElementById('mainNav');
   if (nav) nav.classList.remove('open');
@@ -80,6 +88,9 @@ function navigateTo(page, pushHash) {
     window.location.hash = page;
     return; // hashchange will trigger navigateTo again with pushHash=false
   }
+  
+  // Update tracking
+  currentPage = page;
   
   // Update active nav link
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
