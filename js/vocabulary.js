@@ -238,6 +238,78 @@ function detectPOS(word) {
 // Helper: English word validation (for error detection)
 // ============================================================
 
+// Levenshtein distance for typo detection
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m + 1}, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]) + 1;
+    }
+  }
+  return dp[m][n];
+}
+
+// Common people names for detection
+const COMMON_NAMES = new Set([
+  'peter','john','mary','james','robert','michael','william','david','richard','joseph',
+  'thomas','charles','christopher','daniel','matthew','anthony','mark','donald','steven',
+  'paul','andrew','joshua','kenneth','kevin','brian','george','timothy','ronald','edward',
+  'jason','jeffrey','ryan','jacob','gary','nicholas','eric','jonathan','stephen','larry',
+  'justin','scott','brandon','benjamin','samuel','frank','raymond','gregory','patrick',
+  'alexander','jack','dennis','jerry','tyler','aaron','jose','nathan','henry','douglas',
+  'adam','zachary','nathaniel','kyle','walter','carl','willie','jeremy','harold','keith',
+  'roger','gerald','ethan','arthur','terry','christian','sean','lawrence','austin','joe',
+  'jesse','jordan','billy','bruce','bryan','albert','todd','johnny','randy','philip',
+  'jimmy','danny','roy','howard','fred','vincent','jim','troy','craig','alan','shawn',
+  'tommy','chuck','bob','jake','matt','tom','dick','harry','luke','liam','noah','oliver',
+  'elijah','james','ben','sam','max','leo','oscar','miles','felix','hugo','theo','jude',
+  'jane','sarah','jennifer','lisa','sandra','michelle','patricia','linda','barbara',
+  'elizabeth','susan','jessica','ashley','karen','nancy','betty','margaret','helen',
+  'kimberly','deborah','amanda','donna','carol','melissa','stephanie','rebecca','sharon',
+  'laura','cynthia','kathleen','mary','amy','anna','christine','ruth','janet','lori',
+  'rachel','andrea','tiffany','katherine','julia','teresa','samantha','kathryn','judy',
+  'virginia','catherine','debra','joyce','heather','tina','kelly','denise','doris',
+  'marilyn','emma','olivia','ava','isabella','sophia','mia','charlotte','amelia','harper',
+  'evelyn','abigail','emily','ella','avery','sofia','camila','aria','scarllet','victoria',
+  'chloe','grace','lily','layla','riley','zoey','nora','hannah','lena','sienna','alice',
+  'anna','sarah','julia','elena','luna','maya','aisha','mei','sakura','yuki','ling',
+  'li','wei','fang','chen','wang','zhang','liu','yang','huang','wu','zhao','zhou',
+  'kim','park','choi','jung','lee','yoon','seo','hong','kang','yoon','ahn','baek',
+  'taro','hanako','hiroshi','yoko','kenji','yuki','satoshi','akira','ichiro','ryo',
+  'ahmed','mohammed','ali','omar','hassan','hussain','abdullah','ibrahim','khalid',
+  'fatima','aisha','layla','noor','zara','amira','leila','yusuf','ismail','jamal',
+  'siti','budi','dewi','wayan','ketut','made','nyoman','agus','putu','komang',
+  'juan','carlos','jose','manuel','jesus','miguel','angel','javier','rafael','pedro',
+  'maria','carmen','rosa','elena','sonia','dolores','isabel','ana','lucia','paula',
+  'giuseppe','marco','luca','alessandro','francesco','antonio','giovanni','paolo',
+  'sofia','giulia','alessia','chara','federica','elena','sara','martina','chiara',
+  'hans','fritz','karl','heinrich','wolfgang','klaus','dieter','gerhard','johann',
+  'anna','elise','greta','hedwig','ingrid','klara','lotte','marta','ursula','waltraud',
+  'yuki','hiroshi','sakura','kenji','yoko','taro','hanako','akira','ichiro','ryo',
+  'haruto','souta','yuito','hinata','sakura','mei','ren','aoi','sumire','akari',
+  'hongkong','hong','kong','shanghai','beijing','tokyo','seoul','london','paris',
+  'berlin','rome','madrid','moscow','newyork','losangeles','chicago','sydney','dubai'
+]);
+
+// Common countries and regions
+const COMMON_COUNTRIES = new Set([
+  'china','japan','korea','india','usa','uk','britain','england','france','germany',
+  'italy','spain','portugal','russia','australia','canada','brazil','mexico','argentina',
+  'thailand','vietnam','singapore','malaysia','indonesia','philippines','myanmar','cambodia',
+  'laos','mongolia','nepal','srilanka','bangladesh','pakistan','iran','iraq','turkey',
+  'israel','egypt','nigeria','southafrica','kenya','morocco','sweden','norway','finland',
+  'denmark','netherlands','belgium','switzerland','austria','poland','czech','hungary',
+  'romania','ukraine','greece','portugal','ireland','scotland','wales','zimbabwe',
+  'taiwan','american','european','asian','african','latin','chinese','japanese','korean',
+  'indian','british','french','german','italian','spanish','russian','australian',
+  'canadian','brazilian','mexican','thai','vietnamese','singaporean','malaysian',
+  'hongkonger','english','american','dutch','swedish','norwegian','danish','finnish',
+  'polish','turkish','arabic','egyptian','israeli','persian','greek','swiss','austrian'
+]);
+
 // Minimal common English word set for basic validation
 const COMMON_ENGLISH_WORDS = new Set([
   'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you',
@@ -318,7 +390,35 @@ function isLikelyValidWord(word) {
   if (w.length < 3) return false;
   if (!/[aeiouy]/i.test(w)) return false;
   
+  // Levenshtein check: if word is very close (distance <= 1) to a known word, it's likely a typo
+  if (w.length >= 3) {
+    const dictWords = COMMON_ENGLISH_WORDS;
+    // Only check words of similar length (±2)
+    const candidates = [];
+    for (const dictW of dictWords) {
+      if (Math.abs(dictW.length - w.length) <= 2) {
+        candidates.push(dictW);
+        if (candidates.length > 100) break; // limit for performance
+      }
+    }
+    for (const dictW of candidates) {
+      if (levenshtein(w, dictW) <= 1) {
+        return false; // Very close to a real word → likely a typo
+      }
+    }
+  }
+  
   return true; // Accept as plausible
+}
+
+function isLikelyName(word) {
+  const w = word.toLowerCase().trim();
+  if (w.length < 2) return false;
+  // Check against name list
+  if (COMMON_NAMES.has(w)) return true;
+  // Check against country list
+  if (COMMON_COUNTRIES.has(w)) return true;
+  return false;
 }
 
 // ============================================================

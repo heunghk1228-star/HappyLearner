@@ -594,11 +594,12 @@ async function classifyAndPrepareWords(wordTexts) {
     const norm = normalizeWord(w);
     const existing = existingMap[norm];
     let status = 'new';
-    if (!isLikelyValidWord(norm) || w !== norm && !isLikelyValidWord(w)) {
-      status = 'error';
-    }
     if (existing) {
       status = 'duplicate';
+    } else if (!isLikelyValidWord(norm) || (w !== norm && !isLikelyValidWord(w))) {
+      status = 'error';
+    } else if (isLikelyName(norm)) {
+      status = 'name';
     }
     return {
       original: w,
@@ -684,38 +685,65 @@ function showWordReviewPage(words) {
 
 function renderReviewColumns() {
   const errors = reviewData.words.filter(w => w.status === 'error');
+  const names = reviewData.words.filter(w => w.status === 'name');
   const success = reviewData.words.filter(w => w.status === 'new');
   const dups = reviewData.words.filter(w => w.status === 'duplicate');
   
-  document.getElementById('reviewColumns').innerHTML = `
-    <div class="review-col review-col-error">
-      <div class="review-col-header">
-        <span class="review-col-icon">❌</span>
-        <span>${t('english.errorWords')} (${errors.length})</span>
-      </div>
-      <div class="review-col-body">
-        ${errors.length ? errors.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('') : `<div class="review-col-empty">—</div>`}
-      </div>
-    </div>
-    <div class="review-col review-col-success">
-      <div class="review-col-header">
-        <span class="review-col-icon">✅</span>
-        <span>${t('english.successWords')} (${success.length})</span>
-      </div>
-      <div class="review-col-body">
-        ${success.length ? success.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('') : `<div class="review-col-empty">—</div>`}
-      </div>
-    </div>
-    <div class="review-col review-col-duplicate">
-      <div class="review-col-header">
-        <span class="review-col-icon">⏭️</span>
-        <span>${t('english.duplicateWords')} (${dups.length})</span>
-      </div>
-      <div class="review-col-body">
-        ${dups.length ? dups.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('') : `<div class="review-col-empty">—</div>`}
-      </div>
-    </div>
-  `;
+  let html = '';
+  
+  if (errors.length > 0) {
+    html += `
+      <div class="review-col review-col-error">
+        <div class="review-col-header">
+          <span class="review-col-icon">❌</span>
+          <span>${t('english.errorWords')} (${errors.length})</span>
+        </div>
+        <div class="review-col-body">
+          ${errors.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('')}
+        </div>
+      </div>`;
+  }
+  
+  if (names.length > 0) {
+    html += `
+      <div class="review-col review-col-name">
+        <div class="review-col-header">
+          <span class="review-col-icon">👤</span>
+          <span>${t('english.nameWords')} (${names.length})</span>
+        </div>
+        <div class="review-col-body">
+          ${names.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('')}
+        </div>
+      </div>`;
+  }
+  
+  if (success.length > 0) {
+    html += `
+      <div class="review-col review-col-success">
+        <div class="review-col-header">
+          <span class="review-col-icon">✅</span>
+          <span>${t('english.successWords')} (${success.length})</span>
+        </div>
+        <div class="review-col-body">
+          ${success.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('')}
+        </div>
+      </div>`;
+  }
+  
+  if (dups.length > 0) {
+    html += `
+      <div class="review-col review-col-duplicate">
+        <div class="review-col-header">
+          <span class="review-col-icon">⏭️</span>
+          <span>${t('english.duplicateWords')} (${dups.length})</span>
+        </div>
+        <div class="review-col-body">
+          ${dups.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('')}
+        </div>
+      </div>`;
+  }
+  
+  document.getElementById('reviewColumns').innerHTML = html || '<div class="review-col-empty">No words to review</div>';
 }
 
 function renderReviewWordRow(w, idx) {
@@ -832,16 +860,21 @@ function updateReviewClassification() {
       const existing = existingMap[norm];
       w.word = norm;
       
-      if (!isLikelyValidWord(norm)) {
-        w.status = 'error';
-        w.existingId = null;
-        w.existingData = null;
-        w.existingTags = null;
-      } else if (existing) {
+      if (existing) {
         w.status = 'duplicate';
         w.existingId = existing.id;
         w.existingData = existing;
         if (!w.meaning) w.meaning = existing.chinese_meaning || '';
+      } else if (!isLikelyValidWord(norm)) {
+        w.status = 'error';
+        w.existingId = null;
+        w.existingData = null;
+        w.existingTags = null;
+      } else if (isLikelyName(norm)) {
+        w.status = 'name';
+        w.existingId = null;
+        w.existingData = null;
+        w.existingTags = null;
       } else {
         w.status = 'new';
         w.existingId = null;
@@ -862,6 +895,7 @@ async function completeReview() {
   showLoading();
   try {
     const newWords = reviewData.words.filter(w => w.status === 'new');
+    const nameWords = reviewData.words.filter(w => w.status === 'name');
     const duplicates = reviewData.words.filter(w => w.status === 'duplicate');
     const errors = reviewData.words.filter(w => w.status === 'error');
     
@@ -881,10 +915,11 @@ async function completeReview() {
       }
     }
     
-    // Add new words with optional tag
+    // Add new words + name words (user decides by deleting from review)
+    const allNew = [...newWords, ...nameWords];
     let addResult = { added: 0, duplicates: 0 };
-    if (newWords.length > 0) {
-      const wordObjs = newWords.map(w => ({
+    if (allNew.length > 0) {
+      const wordObjs = allNew.map(w => ({
         word: w.word,
         pos: w.pos || detectPOS(w.word).join(','),
         meaning: w.meaning || ''
@@ -892,7 +927,10 @@ async function completeReview() {
       addResult = await bulkAddWords(wordObjs, reviewData.selectedTagId);
     }
     
-    showToast(`✅ ${t('english.wordAdded')} (${addResult.added} new, ${errors.length} errors skipped)`);
+    const parts = [];
+    if (addResult.added > 0) parts.push(`✅ ${addResult.added} new`);
+    if (errors.length > 0) parts.push(`❌ ${errors.length} skipped`);
+    showToast(parts.join(' · ') || '✅ ' + t('english.wordAdded'));
     openVocabularyBook();
   } catch (e) {
     showToast('❌ ' + e.message);
