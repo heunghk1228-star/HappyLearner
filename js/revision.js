@@ -123,8 +123,6 @@ async function showWordSelection(words) {
 
   area.innerHTML = `
     <div class="word-selection">
-      <h3>📝 ${t('english.filter')} ${t('english.words')}</h3>
-
       <div class="selection-filters selection-filters-row">
         <div class="filter-row">
           <label>🏷️ ${t('english.tag')}:</label>
