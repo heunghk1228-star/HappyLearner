@@ -20,6 +20,7 @@ async function showRevisionPage() {
   }
   if (window.location.hash !== '#english/revision') {
     history.pushState({}, '', '#english/revision');
+    lastKnownHash = '#english/revision';
   }
   
   const page = document.getElementById('pageContent');

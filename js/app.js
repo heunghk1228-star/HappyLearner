@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   let navCurrentPage = null; // Track current navigation page
   let navTriggered = false; // Set when nav link is clicked (allows re-navigation to parent page)
-  let lastKnownHash = window.location.hash || ''; // Track full hash for back-from-sub-page detection
 
   // Hash-based routing
     window.addEventListener('hashchange', () => {
@@ -93,6 +92,7 @@ function getCurrentSubPageFromHash() {
 
 let navCurrentPage = null; // Track current navigation page to prevent re-navigation
 let navTriggered = false; // Set when nav link is clicked (allows re-navigation to parent page)
+let lastKnownHash = window.location.hash || ''; // Track full hash for back-from-sub-page detection
 
 function navigateTo(page, pushHash) {
   // Close mobile menu
@@ -258,6 +258,7 @@ async function openVocabularyBook() {
   // Only push state if not already on this hash (e.g. direct URL load)
   if (window.location.hash !== '#english/vocab') {
     history.pushState({}, '', '#english/vocab');
+    lastKnownHash = '#english/vocab';
   }
   showLoading();
   const words = await fetchVocabulary();
@@ -571,7 +572,13 @@ async function processWordInput() {
     if (!unique.length) { document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; hideLoading(); return; }
     
     // Step 4: AI normalize (base forms, contractions)
-    const normalized = await callAIBatchNormalize(unique.slice(0, 100));
+    let normalized = [];
+    try {
+      normalized = await callAIBatchNormalize(unique.slice(0, 100));
+    } catch (e) {
+      console.warn('AI normalize failed, using original words:', e);
+      normalized = unique.map(w => ({ original: w, normalized: w, pos: detectPOS(w) }));
+    }
     const seenNorm = new Set();
     const uniqueNorm = [];
     for (const w of normalized) {
@@ -588,7 +595,18 @@ async function processWordInput() {
     }
     
     // Step 5: Classify and show review page
-    const words = await classifyAndPrepareWords(wordTexts);
+    let words = [];
+    try {
+      words = await classifyAndPrepareWords(wordTexts);
+    } catch (e) {
+      console.warn('Classification failed, showing raw words:', e);
+      words = wordTexts.map(w => ({
+        original: w, word: w, meaning: '',
+        pos: detectPOS(w).join(','),
+        status: 'new', existingId: null, existingData: null,
+        tagIds: [], editing: false
+      }));
+    }
     for (const w of words) {
       const match = uniqueNorm.find(u => u.word === w.word);
       if (match && match.pos) w.pos = match.pos;

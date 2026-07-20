@@ -424,6 +424,7 @@ async function openFlashcards() {
   }
   if (window.location.hash !== '#english/flashcards') {
     history.pushState({}, '', '#english/flashcards');
+    lastKnownHash = '#english/flashcards';
   }
 
   showLoading();

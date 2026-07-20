@@ -1698,6 +1698,7 @@ body {
 }
 
 .review-col-error .review-col-header { background: #fef2f2; color: var(--error); }
+.review-col-name .review-col-header { background: #f0f0ff; color: #6366f1; }
 .review-col-success .review-col-header { background: #f0fdf4; color: var(--success); }
 .review-col-duplicate .review-col-header { background: #fefce8; color: var(--warning); }
 
