@@ -402,7 +402,17 @@ function editMeaning(id) {
     const save = el(`save-${id}`);
     const cancel = el(`cancel-${id}`);
     if (!wordText || !editWord || !meaning || !edit || !posText || !posEdit || !editBtn || !save || !cancel) {
-      showToast('❌ 編輯錯誤: DOM 元素缺失');
+      const missing = [];
+      if (!wordText) missing.push('wordText');
+      if (!editWord) missing.push('editWord');
+      if (!meaning) missing.push('meaning');
+      if (!edit) missing.push('edit');
+      if (!posText) missing.push('posText');
+      if (!posEdit) missing.push('posEdit');
+      if (!editBtn) missing.push('editBtn');
+      if (!save) missing.push('save');
+      if (!cancel) missing.push('cancel');
+      showToast('❌ 缺失: ' + missing.join(', '));
       return;
     }
     wordText.classList.add('hidden');
