@@ -395,43 +395,43 @@ function renderVocabList(words) {
 }
 
 function editMeaning(id) {
+  const btn = document.getElementById(`editBtn-${id}`);
+  if (!btn) return;
+  const row = btn.closest('.vocab-row');
+  if (!row) return;
+  
+  // Get current values from the DOM
+  const wordEl = row.querySelector('.col-word strong');
+  const meaningEl = row.querySelector('.col-meaning .meaning-text');
+  if (!wordEl) return;
+  
+  const oldWord = wordEl.textContent;
+  const oldMeaning = meaningEl ? meaningEl.textContent : '';
+  
+  // Prompt for new word
+  const newWord = prompt('修改英文詞彙:', oldWord);
+  if (!newWord || !newWord.trim() || newWord.trim() === oldWord) return;
+  
+  // Prompt for new meaning
+  const newMeaning = prompt('修改中文意思:', oldMeaning || '');
+  if (newMeaning === null) return;
+  
+  // Save to database
+  saveWordEdit(id, newWord.trim().toLowerCase(), newMeaning.trim());
+}
+
+async function saveWordEdit(id, newWord, newMeaning) {
   try {
-    const btn = document.getElementById(`editBtn-${id}`);
-    if (!btn) { showToast('❌ btn not found: editBtn-' + id); return; }
-    const row = btn.closest('.vocab-row');
-    if (!row) { showToast('❌ row not found'); return; }
-    // Debug: check what's in the row
-    const debug = row.innerHTML.substring(0, 200);
-    const colWord = row.querySelector('.col-word');
-    if (!colWord) { showToast('❌ col-word not found. HTML: ' + debug); return; }
-    const wordText = colWord.querySelector('.word-text');
-    if (!wordText) { 
-      showToast('❌ word-text missing. row HTML: ' + row.innerHTML.substring(0, 300)); 
-      return; 
+    await updateWordEntry(id, { word: newWord, chinese_meaning: newMeaning || '' });
+    // Update DOM
+    const row = document.querySelector(`.vocab-row[data-id="${CSS.escape(id)}"]`);
+    if (row) {
+      const wordEl = row.querySelector('.col-word strong');
+      const meaningEl = row.querySelector('.col-meaning .meaning-text');
+      if (wordEl) wordEl.textContent = newWord;
+      if (meaningEl) meaningEl.textContent = newMeaning || '';
     }
-    const editWord = colWord.querySelector('.edit-input');
-    const colMeaning = row.querySelector('.col-meaning');
-    const meaning = colMeaning?.querySelector('.meaning-text');
-    const edit = colMeaning?.querySelector('.edit-input');
-    const colPos = row.querySelector('.col-pos');
-    const posText = colPos?.querySelector('.pos-text');
-    const posEdit = colPos?.querySelector('.pos-edit');
-    const save = document.getElementById(`save-${id}`);
-    const cancel = document.getElementById(`cancel-${id}`);
-    if (!editWord || !meaning || !edit || !posText || !posEdit || !save || !cancel) {
-      showToast('❌ DOM結構異常');
-      return;
-    }
-    wordText.classList.add('hidden');
-    editWord.classList.remove('hidden');
-    meaning.classList.add('hidden');
-    edit.classList.remove('hidden');
-    posText.classList.add('hidden');
-    posEdit.classList.remove('hidden');
-    btn.style.display = 'none';
-    save.style.display = 'inline';
-    cancel.style.display = 'inline';
-    edit.focus();
+    showToast('✅ 已更新');
   } catch(e) {
     showToast('❌ ' + e.message);
   }
