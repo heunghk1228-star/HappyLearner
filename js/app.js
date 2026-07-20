@@ -58,6 +58,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
     });
+
+    // Also handle browser back/forward via popstate (fires before hashchange)
+    window.addEventListener('popstate', () => {
+      const page = getCurrentPageFromHash();
+      if (page) {
+        lastKnownHash = window.location.hash;
+        navigateTo(page, false);
+      }
+    });
   
   // Navigate to initial page from hash or default
   const initialPage = getCurrentPageFromHash() || 'about';
@@ -789,7 +798,39 @@ function renderReviewColumns() {
       </div>`;
   }
   
-  document.getElementById('reviewColumns').innerHTML = html || '<div class="review-col-empty">No words to review</div>';
+  document.getElementById('reviewColumns').innerHTML = html || renderReviewFallback();
+}
+
+function renderReviewFallback() {
+  // If no words matched any status column, show a simple list as fallback
+  if (!reviewData.words || reviewData.words.length === 0) {
+    return '<div class="review-col-empty">No words to review</div>';
+  }
+  return `
+    <div class="review-col review-col-success">
+      <div class="review-col-header">
+        <span class="review-col-icon">📝</span>
+        <span>${t('english.successWords')} (${reviewData.words.length})</span>
+      </div>
+      <div class="review-col-body">
+        ${reviewData.words.map((w, i) => {
+          const idx = reviewData.words.indexOf(w);
+          const posLabels = w.pos ? w.pos.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ') : '';
+          return `
+            <div class="review-word">
+              <div class="review-word-main">
+                <strong class="review-word-text">${w.word}</strong>
+              </div>
+              <div class="review-word-meta">
+                <span class="review-word-meaning">📖 ${w.meaning || '—'}</span>
+                <span class="review-word-pos">🔤 ${posLabels}</span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function renderReviewWordRow(w, idx) {
