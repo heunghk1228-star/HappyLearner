@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const page = link.dataset.page;
+      navTriggered = true;
       navigateTo(page, true);
     });
   });
@@ -36,9 +37,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Hash-based routing
   window.addEventListener('hashchange', () => {
     const page = getCurrentPageFromHash();
-    // Only navigate if page actually changed (prevents tab-switch re-navigation)
-    if (page && page !== navCurrentPage) {
-      navigateTo(page, false);
+    // navTriggered = user clicked a nav link → always navigate
+    // Otherwise, skip if base page hasn't changed (sub-page navigation)
+    if (page) {
+      if (navTriggered) {
+        navTriggered = false;
+        navigateTo(page, false);
+      } else if (page !== navCurrentPage) {
+        navigateTo(page, false);
+      }
     }
   });
   
@@ -74,18 +81,15 @@ function getCurrentSubPageFromHash() {
 // ============================================================
 
 let navCurrentPage = null; // Track current navigation page to prevent re-navigation
+let navTriggered = false; // Set when nav link is clicked (allows re-navigation to parent page)
 
 function navigateTo(page, pushHash) {
-  // Guard: skip if we're already on this page (prevents tab-switch re-navigation)
-  if (page === navCurrentPage && !pushHash) return;
-  
   // Close mobile menu
   const nav = document.getElementById('mainNav');
   if (nav) nav.classList.remove('open');
   
-  // Update URL hash when user navigates (not on hashchange events)
   if (pushHash) {
-    window.location.hash = page;
+      window.location.hash = page;
     return; // hashchange will trigger navigateTo again with pushHash=false
   }
   
@@ -234,6 +238,7 @@ async function loadStreakDisplay() {
 // ============================================================
 
 function showEnglishPage() {
+  navTriggered = true;
   navigateTo('english', true);
 }
 
@@ -1328,6 +1333,7 @@ function showToast(message) {
 }
 
 function showEnglishPage() {
+  navTriggered = true;
   navigateTo('english', true);
 }
 
