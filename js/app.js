@@ -390,7 +390,12 @@ function renderVocabList(words) {
 }
 
 function editMeaning(id) {
-  document.getElementById(`wordText-${id}`).classList.add('hidden');
+  showToast('✏️ 編輯: ' + id);
+  return; // TEMP: test if button works
+  if (!id) { showToast('❌ 無法取得詞彙 ID'); return; }
+  const wordText = document.getElementById(`wordText-${id}`);
+  if (!wordText) { showToast('❌ 詞彙元素不存在'); return; }
+  wordText.classList.add('hidden');
   document.getElementById(`editWord-${id}`).classList.remove('hidden');
   document.getElementById(`meaning-${id}`).classList.add('hidden');
   document.getElementById(`edit-${id}`).classList.remove('hidden');
