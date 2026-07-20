@@ -521,11 +521,27 @@ function showAddWordsPage() {
   content.innerHTML = `
     <div class="add-words-page">
       <h3>${t('english.inputWords')}</h3>
-      <p class="guide">${t('english.inputGuide')}</p>
-      <textarea class="input textarea-input" id="wordInput" rows="8" 
-                placeholder="apple, banana, cat, dog, elephant${unescape('%0A')}Peter has ten toes. He doesn't like apples."></textarea>
-      <div class="word-count" id="wordCount">0 words</div>
-      <button class="btn btn-primary" onclick="processWordInput()">${t('english.submit')}</button>
+      
+      <div class="input-mode-tabs">
+        <button class="input-mode-tab active" data-mode="manual" onclick="switchInputMode('manual')">✏️ 手動輸入</button>
+        <button class="input-mode-tab" data-mode="article" onclick="switchInputMode('article')">📄 文章輸入</button>
+      </div>
+      
+      <div id="manualInputArea">
+        <p class="guide">輸入詞彙，以逗號或空格分隔</p>
+        <textarea class="input textarea-input" id="manualWordInput" rows="6" 
+                  placeholder="apple, banana, cat, dog, elephant"></textarea>
+        <div class="word-count" id="manualWordCount">0 words</div>
+        <button class="btn btn-primary" onclick="processManualInput()">${t('english.submit')}</button>
+      </div>
+      
+      <div id="articleInputArea" class="hidden">
+        <p class="guide">${t('english.inputGuide')}</p>
+        <textarea class="input textarea-input" id="articleWordInput" rows="8" 
+                  placeholder="Peter has ten toes. He doesn't like apples."></textarea>
+        <div class="word-count" id="articleWordCount">0 words</div>
+        <button class="btn btn-primary" onclick="processArticleInput()">📄 ${t('english.submit')}</button>
+      </div>
       
       <div id="addResult" class="add-result"></div>
       <button class="btn btn-outline" onclick="openVocabularyBook()" style="margin-top: 1rem;">
@@ -534,22 +550,98 @@ function showAddWordsPage() {
     </div>
   `;
   
-  // Word count
-  document.getElementById('wordInput').addEventListener('input', function() {
+  // Word count for manual input
+  document.getElementById('manualWordInput').addEventListener('input', function() {
     const words = this.value.trim().split(/[,\s\n]+/).filter(w => w.trim().length > 0);
-    document.getElementById('wordCount').textContent = `${words.length} words`;
+    document.getElementById('manualWordCount').textContent = `${words.length} words`;
+  });
+  
+  // Word count for article input
+  document.getElementById('articleWordInput').addEventListener('input', function() {
+    const words = this.value.trim().split(/[,\s\n]+/).filter(w => w.trim().length > 0);
+    document.getElementById('articleWordCount').textContent = `${words.length} words`;
   });
 }
 
-// Unified input: strip punctuation, expand contractions, AI normalize, classify
-async function processWordInput() {
-  const text = document.getElementById('wordInput').value.trim();
+function switchInputMode(mode) {
+  document.querySelectorAll('.input-mode-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.input-mode-tab[data-mode="${mode}"]`).classList.add('active');
+  document.getElementById('manualInputArea').classList.toggle('hidden', mode !== 'manual');
+  document.getElementById('articleInputArea').classList.toggle('hidden', mode !== 'article');
+}
+
+// Manual input: simple word split, no AI processing
+async function processManualInput() {
+  const text = document.getElementById('manualWordInput').value.trim();
+  if (!text) return;
+  
+  showLoading();
+  try {
+    // Split by comma, space, or newline
+    const raw = text.split(/[,\s\n]+/).filter(w => w.trim().length > 0);
+    if (!raw.length) { hideLoading(); return; }
+    
+    // Lowercase and dedup
+    const seen = new Set();
+    const unique = [];
+    for (const w of raw) {
+      const lower = w.toLowerCase().replace(/[^a-zA-Z]/g, '');
+      if (lower.length > 1 && !seen.has(lower)) {
+        seen.add(lower);
+        unique.push(lower);
+      }
+    }
+    if (!unique.length) {
+      hideLoading();
+      document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>';
+      return;
+    }
+    
+    // Build word objects directly — no AI
+    const words = unique.map(w => ({
+      original: w, word: w, meaning: '',
+      pos: detectPOS(w).join(','),
+      status: 'new', existingId: null, existingData: null,
+      tagIds: [], editing: false
+    }));
+    
+    // Check duplicates against existing vocabulary
+    const allWords = await fetchVocabulary();
+    const existingMap = {};
+    for (const v of allWords) {
+      existingMap[v.word.toLowerCase()] = v;
+    }
+    for (const w of words) {
+      const existing = existingMap[w.word];
+      if (existing) {
+        w.status = 'duplicate';
+        w.existingId = existing.id;
+        w.existingData = existing;
+        w.meaning = existing.chinese_meaning || '';
+      }
+    }
+    
+    hideLoading();
+    document.getElementById('manualWordInput').value = '';
+    document.getElementById('manualWordCount').textContent = '0 words';
+    showWordReviewPage(words);
+  } catch (e) {
+    hideLoading();
+    console.error('processManualInput error:', e);
+    document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
+  }
+}
+
+// Article input: full AI processing (extract, normalize, classify)
+async function processArticleInput() {
+  const text = document.getElementById('articleWordInput').value.trim();
   if (!text) return;
   
   showLoading();
   try {
     // Step 1: Strip punctuation, extract raw words
     let raw = text.replace(/[^\w\s'-]/g, ' ').split(/\s+/).filter(w => w.length > 1 && /^[a-zA-Z]/.test(w));
+    if (!raw.length) { hideLoading(); document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; return; }
     
     // Step 2: Expand contractions
     const CONTRACTIONS = {
@@ -578,9 +670,9 @@ async function processWordInput() {
       const lower = w.toLowerCase();
       if (!seen.has(lower)) { seen.add(lower); unique.push(lower); }
     }
-    if (!unique.length) { document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; hideLoading(); return; }
+    if (!unique.length) { hideLoading(); document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; return; }
     
-    // Step 4: AI normalize (base forms, contractions)
+    // Step 4: AI normalize
     let normalized = [];
     try {
       normalized = await callAIBatchNormalize(unique.slice(0, 100));
@@ -621,12 +713,12 @@ async function processWordInput() {
       if (match && match.pos) w.pos = match.pos;
     }
     hideLoading();
-    document.getElementById('wordInput').value = '';
-    document.getElementById('wordCount').textContent = '0 words';
+    document.getElementById('articleWordInput').value = '';
+    document.getElementById('articleWordCount').textContent = '0 words';
     showWordReviewPage(words);
   } catch (e) {
     hideLoading();
-    console.error('processWordInput error:', e);
+    console.error('processArticleInput error:', e);
     document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
   }
 }

@@ -1392,6 +1392,36 @@ body {
 .tier-badge.tier-well-tested { background: #fffbeb; color: #f59e0b; }
 .tier-badge.tier-mastered { background: #f0fdf4; color: #22c55e; }
 
+.input-mode-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.input-mode-tab {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.input-mode-tab:hover {
+  border-color: var(--primary);
+  background: var(--bg);
+}
+
+.input-mode-tab.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
+
 .hint-btn-large {
   font-size: 2rem;
   background: none;
