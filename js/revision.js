@@ -209,18 +209,20 @@ function renderSpellingQuestion(q) {
 
 function renderFillBlankQuestion(q) {
   const word = q.word;
+  // Generate sentence asynchronously
+  setTimeout(() => generateSentence(word.word), 50);
   return `
     <div class="question-type">${t('english.fillBlank')}</div>
     <div class="fill-blank-sentence" id="sentenceDisplay">
       <div class="loading-sentence">${t('common.loading')}</div>
     </div>
+    <div class="fill-blank-actions">
+      <button class="btn btn-sm btn-outline" onclick="showHint('${word.id}')" title="💡 提示">💡 ${t('english.hint')}</button>
+    </div>
     <input type="text" id="answerInput" class="input answer-input" 
            placeholder="${t('english.typeHere')}" autocomplete="off"
            onkeydown="if(event.key==='Enter') submitAnswer()">
   `;
-  
-  // Generate AI sentence in background
-  generateSentence(word.word);
 }
 
 async function generateSentence(word) {
@@ -253,6 +255,26 @@ async function generateSentence(word) {
   `;
   display.dataset.sentence = fallback;
   display.dataset.word = word;
+}
+
+function showHint(wordId) {
+  const q = testQuestions[currentTestIndex];
+  if (!q || q.word.id !== wordId) return;
+  const hint = q.word.chinese_meaning || '(未有翻譯)';
+  // Show hint on a floating element near the input
+  let hintEl = document.getElementById('hintDisplay');
+  if (!hintEl) {
+    const input = document.getElementById('answerInput');
+    if (!input) return;
+    hintEl = document.createElement('div');
+    hintEl.id = 'hintDisplay';
+    hintEl.className = 'hint-bubble';
+    input.parentNode.insertBefore(hintEl, input);
+  }
+  hintEl.textContent = '💡 ' + hint;
+  hintEl.classList.add('visible');
+  // Mark question as hinted — counts as correct but no level up
+  q.hinted = true;
 }
 
 async function callAISentence(word) {
@@ -312,8 +334,8 @@ function submitAnswer() {
     resultArea.innerHTML = `<div class="result-correct">${t('english.correct')}</div>`;
     playClapSound();
     
-    // Level up logic (auto mode only, max 1 level per day)
-    if (testMode === 'auto' && q.word.level < 6) {
+    // Level up logic (auto mode only, max 1 level per day, skip if hinted)
+    if (testMode === 'auto' && q.word.level < 6 && !q.hinted) {
       const today = new Date().toISOString().split('T')[0];
       if (q.word.last_reviewed !== today) {
         const oldLevel = q.word.level;
