@@ -339,12 +339,16 @@ function speakWord(word) {
   }
 }
 
+let speechSpeedDebounce = null;
+
 function updateSpeechSpeed(value) {
   const rate = parseFloat(value);
   setSpeechRate(rate);
   document.getElementById('speedValue').textContent = Math.round(rate * 100) + '%';
-  // Test the new speed immediately
-  speakWord('Hello');
+  // Debounce — Chrome speechSynthesis locks up if cancel/speak cycles
+  // happen too fast (known Chrome bug). Only speak after user stops dragging.
+  clearTimeout(speechSpeedDebounce);
+  speechSpeedDebounce = setTimeout(() => speakWord('Hello'), 350);
 }
 
 function testSpeechVoice() {
