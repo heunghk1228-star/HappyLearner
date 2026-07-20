@@ -848,21 +848,26 @@ body {
 
 .grid-card-front {
   background: linear-gradient(135deg, #eef2ff, #f5f3ff);
-  gap: 0.35rem;
+  gap: 0.5rem;
+}
+.grid-card-front .sound-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.grid-word {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
 }
 
 .grid-card-back {
   background: var(--card-bg);
   transform: rotateY(180deg);
   gap: 0.25rem;
-}
-
-.grid-word {
-  font-size: 1.15rem;
-  font-weight: 700;
-  text-align: center;
-  word-break: break-word;
-  line-height: 1.3;
 }
 
 .sound-btn-sm {

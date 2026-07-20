@@ -165,8 +165,10 @@ function renderMiniCard(word) {
       <div class="grid-card-inner">
         <div class="grid-card-front">
           <div class="grid-word">${word.word}</div>
-          <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordSlow('${word.word}')" title="🐢 ${t('english.slow')}">🐢</button>
-          <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordFast('${word.word}')" title="🐇 ${t('english.fast')}">🐇</button>
+          <div class="sound-row">
+            <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordSlow('${word.word}')" title="🐢 ${t('english.slow')}">🐢</button>
+            <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordFast('${word.word}')" title="🐇 ${t('english.fast')}">🐇</button>
+          </div>
           <div class="grid-tier">${tierLabel}</div>
         </div>
         <div class="grid-card-back">
@@ -175,6 +177,7 @@ function renderMiniCard(word) {
           ${isVerb ? `<div class="grid-forms"><small>${forms.past}, ${forms.pp}</small></div>` : ''}
           ${displaySentence 
             ? `<div class="grid-sentence">${displaySentence}
+               <button class="btn-regenerate" onclick="event.stopPropagation(); speakSentence('${word.id}')" title="🔊 朗讀句子">🔊</button>
                <button class="btn-regenerate" onclick="event.stopPropagation(); regenerateSentence('${word.id}')" title="Regenerate">🔄</button></div>`
             : `<div class="grid-sentence"><button class="btn-regenerate" onclick="event.stopPropagation(); regenerateSentence('${word.id}')">✨ Generate</button></div>`}
         </div>
@@ -493,21 +496,42 @@ async function generateAllSentences() {
 async function regenerateSentence(wordId) {
   const word = currentFlashcards.find(w => w.id === wordId);
   if (!word) return;
+  
+  // Show loading state on the card
+  const btn = document.querySelector(`[onclick*="regenerateSentence('${wordId}')"]`);
+  const sentenceDiv = btn?.closest('.grid-sentence');
+  if (sentenceDiv) sentenceDiv.innerHTML = '<span class="text-light">⏳ Generating...</span>';
+  
   try {
     const sentence = await callAISentence(word.word);
     if (sentence) {
       await supabaseClient.from('vocabulary').update({ sample_sentence: sentence }).eq('id', wordId);
       word.sample_sentence = sentence;
     } else {
-      const fb = getFallbackSentence(word.word) || `This is a sample sentence using the word "${word.word}".`;
+      const fb = getFallbackSentence(word.word) || ('This is a sample sentence using the word "' + word.word + '".');
       await supabaseClient.from('vocabulary').update({ sample_sentence: fb }).eq('id', wordId);
       word.sample_sentence = fb;
     }
-    renderGrid();
+    // Update the card DOM directly — no full grid re-render
+    if (sentenceDiv) {
+      sentenceDiv.innerHTML = word.sample_sentence + `
+        <button class="btn-regenerate" onclick="event.stopPropagation(); speakSentence('${word.id}')" title="🔊 朗讀句子">🔊</button>
+        <button class="btn-regenerate" onclick="event.stopPropagation(); regenerateSentence('${word.id}')" title="Regenerate">🔄</button>`;
+    }
     showToast('✅ Sentence updated!');
   } catch (e) {
     showToast('❌ AI failed: ' + e.message);
+    if (sentenceDiv) {
+      sentenceDiv.innerHTML = '<span class="text-light">❌ Failed</span>' +
+        `<button class="btn-regenerate" onclick="event.stopPropagation(); regenerateSentence('${word.id}')">🔄 Retry</button>`;
+    }
   }
+}
+
+function speakSentence(wordId) {
+  const word = currentFlashcards.find(w => w.id === wordId);
+  if (!word || !word.sample_sentence) return;
+  speakWord(word.sample_sentence, getSlowRate());
 }
 
 function filterFlashcards() {

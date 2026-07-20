@@ -177,7 +177,7 @@ function showQuestion() {
     <div class="test-result" id="testResult"></div>
     <div class="test-actions">
       <button class="btn btn-primary" id="submitAnswerBtn" onclick="submitAnswer()">
-        ✅ ${isLast ? t('english.finishTest') : t('english.nextQuestion')}
+        ✅ 確定
       </button>
     </div>
   `;
@@ -211,9 +211,6 @@ function renderFillBlankQuestion(q) {
     <div class="question-type">${t('english.fillBlank')}</div>
     <div class="fill-blank-sentence" id="sentenceDisplay">
       <div class="loading-sentence">${t('common.loading')}</div>
-    </div>
-    <div class="question-word-hint">
-      <small>${word.chinese_meaning || ''} · ${word.part_of_speech ? word.part_of_speech.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ') : ''}</small>
     </div>
     <input type="text" id="answerInput" class="input answer-input" 
            placeholder="${t('english.typeHere')}" autocomplete="off"
@@ -310,7 +307,6 @@ function submitAnswer() {
   q.correct = isCorrect;
   
   if (isCorrect) {
-    correctCount++;
     resultArea.innerHTML = `<div class="result-correct">${t('english.correct')}</div>`;
     playClapSound();
     
@@ -341,17 +337,23 @@ function submitAnswer() {
     
     // Add to retry queue — will appear again after current questions
     if (retryQueue.length < 3) {
-      const retryQ = { ...q };
+      const retryQ = { ...q, isRetry: true };
       // For fill-blank, generate a new sentence on retry
       retryQueue.push(retryQ);
     }
   }
   
-  // Disable input and change button
+  // Only count non-retry correct answers
+  if (isCorrect && !q.isRetry) {
+    correctCount++;
+  }
+  
+  // Disable input and change button to next step
   input.disabled = true;
   const submitBtn = document.getElementById('submitAnswerBtn');
-  submitBtn.onclick = nextQuestion;
-  submitBtn.textContent = '▶ ' + t('english.nextQuestion');
+  const isLast = currentTestIndex >= testQuestions.length - 1;
+  submitBtn.onclick = isLast ? finishTest : nextQuestion;
+  submitBtn.textContent = isLast ? '🏁 ' + t('english.finishTest') : '▶ ' + t('english.nextQuestion');
   
   // Show encouragement
   showEncouragement(isCorrect);
