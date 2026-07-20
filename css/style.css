@@ -1310,6 +1310,113 @@ body {
   color: var(--text-light);
 }
 
+.selection-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg);
+  border-radius: 8px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-row label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.selection-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.checkbox-inline input {
+  width: 18px;
+  height: 18px;
+}
+
+.selection-count {
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.selection-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.question-count-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.question-count-note {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.tier-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-left: 0.3rem;
+}
+
+.tier-badge.tier-newbee { background: #eff6ff; color: #3b82f6; }
+.tier-badge.tier-well-tested { background: #fffbeb; color: #f59e0b; }
+.tier-badge.tier-mastered { background: #f0fdf4; color: #22c55e; }
+
+.hint-btn-large {
+  font-size: 2rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  transition: transform 0.2s;
+  line-height: 1;
+}
+
+.hint-btn-large:hover {
+  transform: scale(1.2);
+}
+
+.retry-notice {
+  text-align: center;
+  padding: 0.5rem;
+  background: #fffbeb;
+  color: #f59e0b;
+  font-weight: 700;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
 /* ============================================================
    Auth Modal
    ============================================================ */
