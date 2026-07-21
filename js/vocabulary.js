@@ -30,7 +30,8 @@ const POS_MAP = {
   'interjection': { 'zh-TW': '感嘆詞', 'zh-CN': '感叹词', 'en': 'Interjection' },
   'number': { 'zh-TW': '數量詞', 'zh-CN': '数量词', 'en': 'Number' },
   'article': { 'zh-TW': '冠詞', 'zh-CN': '冠词', 'en': 'Article' },
-  'modal': { 'zh-TW': '情態動詞', 'zh-CN': '情态动词', 'en': 'Modal Verb' }
+  'modal': { 'zh-TW': '情態動詞', 'zh-CN': '情态动词', 'en': 'Modal Verb' },
+  'name': { 'zh-TW': '人名/地名', 'zh-CN': '人名/地名', 'en': 'Name/Place' }
 };
 
 // Common irregular verbs mapping (base form -> {past, pp, ing, s})

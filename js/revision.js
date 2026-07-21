@@ -373,8 +373,9 @@ function prepareQuestions() {
 
   for (const word of testWords) {
     const level = word.level || 1;
-    // Spelling-only mode: all questions are spelling type
-    const qType = spellingOnlyMode ? 'spelling' : (level <= 2 ? 'spelling' : 'fillblank');
+    const pos = (word.pos || word.part_of_speech || '').toLowerCase();
+    // Name/place words are always spelling only
+    const qType = spellingOnlyMode || pos.includes('name') ? 'spelling' : (level <= 2 ? 'spelling' : 'fillblank');
 
     testQuestions.push({
       word,

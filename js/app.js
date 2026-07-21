@@ -677,7 +677,7 @@ async function processManualInput() {
         word: orig,       // preserve original casing
         lower: lower,     // lowercase for lookups
         meaning: existing ? (existing.chinese_meaning || '') : '',
-        pos: existing ? (existing.part_of_speech || detectPOS(lower).join(',')) : detectPOS(lower).join(','),
+        pos: status === 'name' ? 'name' : (existing ? (existing.part_of_speech || detectPOS(lower).join(',')) : detectPOS(lower).join(',')),
         status: status,
         existingId: existing ? existing.id : null,
         tagIds: [],
@@ -830,7 +830,7 @@ async function classifyAndPrepareWords(wordTexts) {
       original: w,
       word: norm,
       meaning: existing ? (existing.chinese_meaning || '') : '',
-      pos: existing ? (existing.part_of_speech || detectPOS(norm).join(',')) : detectPOS(norm).join(','),
+      pos: status === 'name' ? 'name' : (existing ? (existing.part_of_speech || detectPOS(norm).join(',')) : detectPOS(norm).join(',')),
       status: status,
       existingId: existing ? existing.id : null,
       existingData: existing || null,
