@@ -11,6 +11,9 @@ let retryQueue = [];
 let leveledUpWords = [];
 let initialQuestionCount = 0;
 
+// Spelling-only mode: all questions are spelling type, only newbee words can level up
+let spellingOnlyMode = localStorage.getItem('spellingOnlyMode') === 'true';
+
 // Tier filter state for word selection (specify mode)
 let revisionActiveTiers = ['newbee', 'well-tested', 'mastered'];
 let revisionTagFilter = '';
@@ -33,11 +36,18 @@ async function showRevisionPage() {
 
   const page = document.getElementById('pageContent');
   page.innerHTML = `
-    <div class="page-header">
-      <h2>${t('english.revisionTitle')}</h2>
-    </div>
-    <div class="revision-modes">
-      <div class="mode-card" onclick="startRevision('auto')">
+      <div class="page-header">
+        <h2>${t('english.revisionTitle')}</h2>
+      </div>
+      <div class="spelling-toggle-row">
+        <label class="spelling-toggle-label">
+          <input type="checkbox" id="spellingOnlyToggle" ${spellingOnlyMode ? 'checked' : ''} onchange="toggleSpellingOnly()">
+          <span>🔤 ${t('english.spellingOnly')}</span>
+        </label>
+        <div class="spelling-toggle-desc">${t('english.spellingOnlyDesc')}</div>
+      </div>
+      <div class="revision-modes">
+        <div class="mode-card" onclick="startRevision('auto')">
         <div class="mode-icon">🧠</div>
         <h3>${t('english.autoMode')}</h3>
         <p>${t('english.autoModeDesc')}</p>
@@ -50,6 +60,12 @@ async function showRevisionPage() {
     </div>
     <div id="revisionArea"></div>
   `;
+}
+
+// Spelling-only toggle handler
+function toggleSpellingOnly() {
+  spellingOnlyMode = document.getElementById('spellingOnlyToggle').checked;
+  localStorage.setItem('spellingOnlyMode', spellingOnlyMode);
 }
 
 // ============================================================
@@ -348,7 +364,8 @@ function prepareQuestions() {
 
   for (const word of testWords) {
     const level = word.level || 1;
-    const qType = level <= 2 ? 'spelling' : 'fillblank';
+    // Spelling-only mode: all questions are spelling type
+    const qType = spellingOnlyMode ? 'spelling' : (level <= 2 ? 'spelling' : 'fillblank');
 
     testQuestions.push({
       word,
@@ -428,14 +445,15 @@ function renderSpellingQuestion(q) {
 
 function renderFillBlankQuestion(q) {
   const word = q.word;
-  setTimeout(() => generateSentence(word.word), 50);
+  setTimeout(() => generateSentence(word.word, word.fillblank_sentence), 50);
   return `
     <div class="question-type">${t('english.fillBlank')}</div>
     <div class="fill-blank-sentence" id="sentenceDisplay">
       <div class="loading-sentence">${t('common.loading')}</div>
     </div>
     <div class="fill-blank-actions">
-      <button class="hint-btn-large" onclick="showHint('${word.id}')" title="💡 提示">💡</button>
+      <button class="sound-btn-large" onclick="speakFillBlankSentence()" title="🔊 ${t('english.listen')}">🔊</button>
+      <button class="hint-btn-large" onclick="showHint('${word.id}')" title="💡 ${t('english.hint')}">💡</button>
     </div>
     <input type="text" id="answerInput" class="input answer-input" 
            placeholder="${t('english.typeHere')}" autocomplete="off"
@@ -443,9 +461,21 @@ function renderFillBlankQuestion(q) {
   `;
 }
 
-async function generateSentence(word) {
+async function generateSentence(word, cachedSentence) {
   const display = document.getElementById('sentenceDisplay');
   if (!display) return;
+
+  // Use cached sentence if available
+  if (cachedSentence) {
+    const blanked = cachedSentence.replace(new RegExp(word, 'gi'), '________');
+    display.innerHTML = `
+      <div class="sentence-text">${blanked}</div>
+      <div class="sentence-source">📚 ${t('english.cached')}</div>
+    `;
+    display.dataset.sentence = cachedSentence;
+    display.dataset.word = word;
+    return;
+  }
 
   try {
     const sentence = await callAISentence(word);
@@ -489,11 +519,73 @@ function showHint(wordId) {
   hintEl.textContent = hint;
   hintEl.classList.add('visible');
   q.hinted = true;
-}
+  }
 
-// ============================================================
-// AI Sentence Generation
-// ============================================================
+  // ============================================================
+  // Fill-Blank Read-Aloud (speak sentence, skip blanked word)
+  // ============================================================
+
+  function speakFillBlankSentence() {
+    const display = document.getElementById('sentenceDisplay');
+    if (!display || !('speechSynthesis' in window)) return;
+    const sentence = display.dataset.sentence;
+    const word = display.dataset.word;
+    if (!sentence || !word) return;
+
+    window.speechSynthesis.cancel();
+    const regex = new RegExp(word, 'gi');
+    const parts = sentence.split(regex);
+    if (parts.length < 2) {
+      // Word not found in sentence — read whole thing
+      const u = new SpeechSynthesisUtterance(sentence);
+      u.lang = 'en-US';
+      u.rate = getSlowRate();
+      if (availableVoices.length > 0) u.voice = pickBestVoice();
+      window.speechSynthesis.speak(u);
+      return;
+    }
+
+    // Speak each part with a gap where the blank would be
+    parts.forEach((part, i) => {
+      if (part.trim()) {
+        const u = new SpeechSynthesisUtterance(part);
+        u.lang = 'en-US';
+        u.rate = getSlowRate();
+        if (availableVoices.length > 0) u.voice = pickBestVoice();
+        window.speechSynthesis.speak(u);
+      }
+      // Add a brief pause between parts (the blank)
+      if (i < parts.length - 1) {
+        const pause = new SpeechSynthesisUtterance(' ');
+        pause.rate = 0.01;
+        pause.lang = 'en-US';
+        window.speechSynthesis.speak(pause);
+      }
+    });
+  }
+
+  // ============================================================
+  // Background Pre-generation of Fill-Blank Sentences
+  // ============================================================
+
+  async function precacheFillBlankSentence(word) {
+    if (!word || word.fillblank_sentence) return; // Already cached
+    try {
+      const sentence = await callAISentence(word.word);
+      if (sentence && sentence.includes(word.word)) {
+        await supabaseClient
+          .from('vocabulary')
+          .update({ fillblank_sentence: sentence })
+          .eq('id', word.id);
+        word.fillblank_sentence = sentence;
+      }
+    } catch (e) {
+      console.log('Precache failed for', word.word, e.message);
+    }
+  }
+
+  // ============================================================
+  // AI Sentence Generation
 
 async function callAISentence(word) {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -556,13 +648,22 @@ function submitAnswer() {
 
     // Auto mode: level up (max 1 level per day, skip if hinted)
     if (testMode === 'auto' && q.word.level < 6 && !q.hinted) {
-      const today = new Date().toISOString().split('T')[0];
-      if (q.word.last_reviewed !== today) {
-        const oldLevel = q.word.level;
-        const newLevel = Math.min(q.word.level + 1, 6);
-        updateWordLevel(q.word.id, newLevel);
-        q.word.level = newLevel;
-        leveledUpWords.push({ word: q.word.word, oldLevel, newLevel });
+      // Spelling-only mode: only newbee words can level up
+      if (spellingOnlyMode && q.word.level >= 3) {
+        // Block leveling up well-tested+ words
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        if (q.word.last_reviewed !== today) {
+          const oldLevel = q.word.level;
+          const newLevel = Math.min(q.word.level + 1, 6);
+          updateWordLevel(q.word.id, newLevel);
+          q.word.level = newLevel;
+          leveledUpWords.push({ word: q.word.word, oldLevel, newLevel });
+          // Background pre-generate fill-blank sentence when reaching level 3 (well-tested)
+          if (oldLevel < 3 && newLevel >= 3) {
+            precacheFillBlankSentence(q.word);
+          }
+        }
       }
     }
 

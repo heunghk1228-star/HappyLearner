@@ -992,6 +992,40 @@ body {
   margin-bottom: 2rem;
 }
 
+.spelling-toggle-row {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.spelling-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.spelling-toggle-label input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+}
+
+.spelling-toggle-desc {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  flex: 1;
+  min-width: 200px;
+}
+
 .mode-card {
   background: var(--card-bg);
   padding: 2rem;
