@@ -14,7 +14,6 @@ const I18N = {
     },
     about: {
       title: '關於我們',
-      hero: '我是香港公開試狀元，現職教育工作者。',
       desc1: '因市面學習工具流於表面，所以親自為女兒建立學習工具。當中結合了多個學習理論及自己的學習經驗及教學經驗。',
       desc2: '以串生字為例，我們有 Flash Cards，運用了記憶曲線原理。我們深知學習一個詞彙遠不止於串字——我們亦強調如何運用詞語。因此除了串字，我們還有填空練習。',
       desc3: '你可以輸入自己的詞彙庫，我們的網站會追蹤你對每個詞彙的熟悉程度。我們還有打卡系統，鼓勵（監察）學生每天溫習所學。',
@@ -205,7 +204,6 @@ const I18N = {
     },
     about: {
       title: '关于我们',
-      hero: '我是香港公开试状元，现职教育工作者。',
       desc1: '因市面学习工具流于表面，所以亲自为女儿建立学习工具。当中结合了多个学习理论及自己的学习经验及教学经验。',
       desc2: '以串生字为例，我们有 Flash Cards，运用了记忆曲线原理。我们深知学习一个词汇远不止于串字——我们亦强调如何运用词语。因此除了串字，我们还有填空练习。',
       desc3: '你可以输入自己的词汇库，我们的网站会追踪你对每个词汇的熟悉程度。我们还有打卡系统，鼓励（监察）学生每天温习所学。',
@@ -384,7 +382,6 @@ const I18N = {
     },
     about: {
       title: 'About Us',
-      hero: 'I am a Hong Kong public exam top scorer, now working in education.',
       desc1: 'Finding most learning tools superficial, I built this toolkit for my daughter. It combines multiple learning theories with my own study and teaching experience.',
       desc2: 'Take vocabulary building as an example — we have Flash Cards employing the memory curve principle. We know learning a word is far more than just spelling it; we also emphasize how to use words. So beyond spelling, we have fill-in-the-blank exercises.',
       desc3: 'You can input your own vocabulary database, and our website tracks your familiarity with each word. We also have a check-in system to encourage (monitor) students to review what they\'ve learned daily.',

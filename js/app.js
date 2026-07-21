@@ -155,7 +155,6 @@ function renderAboutPage(container) {
     <div class="about-page">
       <div class="about-hero">
         <h1>${t('about.title')}</h1>
-        <p class="hero-text">${t('about.hero')}</p>
       </div>
       <div class="about-content">
         <p>${t('about.desc1')}</p>
