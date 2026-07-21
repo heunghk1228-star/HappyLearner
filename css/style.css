@@ -2013,6 +2013,24 @@ body {
   color: var(--text-light);
 }
 
+.inline-edit-input {
+  padding: 0.2rem 0.4rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
+}
+
+.review-word-meaning,
+.review-word-pos {
+  cursor: pointer;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.2s;
+}
+
+.review-word-meaning:hover,
+.review-word-pos:hover {
+  border-bottom-color: var(--primary-light);
+}
+
 .review-word-row-actions {
   display: flex;
   gap: 0.25rem;

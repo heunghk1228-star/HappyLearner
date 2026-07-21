@@ -735,6 +735,31 @@ async function getWordsReviewedLast7Days() {
   return count || 0;
 }
 
+// Track a correct answer in the review count (localStorage-based, per day)
+function trackCorrectAnswer() {
+  const today = new Date();
+  const key = 'reviewCount_' + today.getFullYear() + '_' +
+    String(today.getMonth() + 1).padStart(2, '0') + '_' +
+    String(today.getDate()).padStart(2, '0');
+  const count = parseInt(localStorage.getItem(key) || '0');
+  localStorage.setItem(key, count + 1);
+}
+
+// Get total correct answers in the last 7 days from localStorage
+function getReviewCountLast7Days() {
+  let total = 0;
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = 'reviewCount_' + d.getFullYear() + '_' +
+      String(d.getMonth() + 1).padStart(2, '0') + '_' +
+      String(d.getDate()).padStart(2, '0');
+    total += parseInt(localStorage.getItem(key) || '0');
+  }
+  return total;
+}
+
 // ============================================================
 // AI: Batch Chinese meaning generation
 // ============================================================

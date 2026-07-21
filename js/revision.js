@@ -677,6 +677,7 @@ function submitAnswer() {
 
     if (!q.isRetry) {
       correctCount++;
+      trackCorrectAnswer();
     }
 
     // Regenerate fill-blank sentence after correct answer

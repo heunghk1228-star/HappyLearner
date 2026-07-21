@@ -87,8 +87,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.onAuthChange = (user) => {
     if (user) {
       hideAuthModal();
+      // Re-render current page content without changing hash
       const page = getCurrentPageFromHash();
-      if (page === 'english') navigateTo('english', true);
+      if (page) {
+        const content = document.getElementById('pageContent');
+        if (content) {
+          // Re-render the page to reflect logged-in state
+          switch (page) {
+            case 'english':
+              renderEnglishPage(content);
+              setTimeout(() => {
+                const sub = getCurrentSubPageFromHash();
+                if (sub === 'vocab') openVocabularyBook();
+                else if (sub === 'flashcards') openFlashcards();
+                else if (sub === 'revision') showRevisionPage();
+              }, 10);
+              break;
+            case 'about': renderAboutPage(content); break;
+            case 'math': renderMathPage(content); break;
+            case 'science': renderSciencePage(content); break;
+            default:
+              if (typeof renderComingSoonPage === 'function')
+                renderComingSoonPage(content, page);
+          }
+        }
+      }
     }
   };
 });
@@ -258,7 +281,7 @@ async function loadStreakDisplay() {
   const checkedIn = await getTodayCheckIn();
   const streak = await getCheckInStreak();
   const wordsLast7 = await getWordsLast7Days();
-  const wordsReviewed = await getWordsReviewedLast7Days();
+  const wordsReviewed = getReviewCountLast7Days();
   el.classList.remove('hidden');
   el.innerHTML = `
     <div class="growth-bar">
@@ -906,22 +929,72 @@ function renderReviewWordRow(w, idx) {
   return `
     <div class="review-word-row" data-idx="${idx}">
       <div class="review-word-info">
+        <button class="btn-icon" onclick="editReviewWord(${idx})" title="✏️">✏️</button>
         <span class="review-word-word"><strong>${w.word}</strong></span>
-        <span class="review-word-meaning">📖 ${w.meaning || '—'}</span>
-        <span class="review-word-pos">🔤 ${posLabels}</span>
+        <span class="review-word-meaning" onclick="inlineEditMeaning(${idx})" title="按一下編輯中文意思">📖 <span id="meaningDisplay-${idx}">${w.meaning || '—'}</span></span>
+        <span class="review-word-pos" onclick="inlineEditPOS(${idx})" title="按一下編輯詞性">🔤 <span id="posDisplay-${idx}">${posLabels}</span></span>
         <select class="input review-word-tag-select" onchange="onReviewWordTagChange(${idx}, this.value)" style="max-width:110px;font-size:0.8rem">
           <option value="">🏷️ —</option>
           ${tagOptions}
         </select>
       </div>
       <div class="review-word-row-actions">
-        <button class="btn-icon" onclick="editReviewWord(${idx})" title="✏️">✏️</button>
         <button class="btn-icon" onclick="deleteReviewWord(${idx})" title="🗑️">🗑️</button>
         ${w.status === 'error' ? `<button class="btn-icon" onclick="fixReviewWord(${idx})" title="🔧 修正">🔧</button>` : ''}
         ${w.status === 'name' ? `<button class="btn-icon" onclick="keepReviewWord(${idx})" title="✅ 保留">✅</button>` : ''}
       </div>
     </div>
   `;
+}
+
+function inlineEditMeaning(idx) {
+  const w = reviewData.words[idx];
+  if (!w) return;
+  const display = document.getElementById(`meaningDisplay-${idx}`);
+  if (!display) return;
+  const current = w.meaning || '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.className = 'input inline-edit-input';
+  input.style.width = '150px';
+  input.onblur = function() {
+    w.meaning = this.value.trim();
+    display.textContent = w.meaning || '—';
+    this.replaceWith(display);
+  };
+  input.onkeydown = function(e) {
+    if (e.key === 'Enter') this.blur();
+    if (e.key === 'Escape') { this.value = current; this.blur(); }
+  };
+  display.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function inlineEditPOS(idx) {
+  const w = reviewData.words[idx];
+  if (!w) return;
+  const display = document.getElementById(`posDisplay-${idx}`);
+  if (!display) return;
+  const current = w.pos || '';
+  const input = document.createElement('select');
+  input.className = 'input inline-edit-input';
+  input.style.width = '120px';
+  input.innerHTML = Object.entries(POS_MAP).map(([key, val]) =>
+    `<option value="${key}" ${current === key ? 'selected' : ''}>${val[currentLang] || key}</option>`
+  ).join('');
+  input.onblur = function() {
+    w.pos = this.value;
+    const newLabel = POS_MAP[w.pos]?.[currentLang] || w.pos;
+    display.textContent = newLabel;
+    this.replaceWith(display);
+  };
+  input.onkeydown = function(e) {
+    if (e.key === 'Escape') { this.value = current; this.blur(); }
+  };
+  display.replaceWith(input);
+  input.focus();
 }
 
 function onReviewWordTagChange(idx, tagId) {
