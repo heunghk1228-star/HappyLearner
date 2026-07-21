@@ -909,3 +909,946 @@ async function callAIBatchNormalize(words) {
   }
   return allResults;
 }
+
+// ============================================================
+// Vocabulary Book Page — UI (moved from app.js)
+// ============================================================
+
+function showEnglishPage() {
+  window.__hermes_navTriggered = true;
+  navigateTo('english', true);
+}
+
+async function openVocabularyBook() {
+  if (window.location.hash !== '#english/vocab') {
+    history.pushState({}, '', '#english/vocab');
+    lastKnownHash = '#english/vocab';
+  }
+  isInSubPage = true;
+  showLoading();
+  const words = await fetchVocabulary();
+  
+  const content = document.getElementById('englishContent');
+  if (!content) return;
+  
+  const newbeeCount = words.filter(w => w.level <= 2).length;
+  const wellTestedCount = words.filter(w => w.level >= 3 && w.level <= 5).length;
+  const masteredCount = words.filter(w => w.level >= 6).length;
+  
+  content.innerHTML = `
+    <div class="vocab-book-page">
+      <div class="vocab-stats">
+        <div class="stat-box newbee">
+          <span class="stat-num">${newbeeCount}</span>
+          <span class="stat-label">${t('english.newbee')}</span>
+        </div>
+        <div class="stat-box well-tested">
+          <span class="stat-num">${wellTestedCount}</span>
+          <span class="stat-label">${t('english.wellTested')}</span>
+        </div>
+        <div class="stat-box mastered">
+          <span class="stat-num">${masteredCount}</span>
+          <span class="stat-label">${t('english.mastered')}</span>
+        </div>
+      </div>
+      
+      <div class="vocab-actions">
+        <button class="btn btn-primary" onclick="showAddWordsPage()">➕ ${t('english.addWords')}</button>
+        <input type="text" class="input search-input" id="vocabSearch" 
+               placeholder="${t('english.search')}" 
+               oninput="searchVocabList(this.value)">
+        <div class="tier-filter-btns" style="margin:0.25rem 0">
+          <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleVocabTier('newbee')">${t('english.newbee')}</button>
+          <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleVocabTier('well-tested')">${t('english.wellTested')}</button>
+          <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleVocabTier('mastered')">${t('english.mastered')}</button>
+        </div>
+        <div class="tag-filter-group">
+          <select class="input" id="tagFilter" onchange="filterByTag(this.value)" style="max-width:140px;font-size:0.85rem">
+            <option value="">🏷️ ${t('english.all')}</option>
+          </select>
+          <button class="btn-icon" onclick="showCreateTagInput()" title="${t('english.newTag')}">➕</button>
+          <div class="inline-tag-create hidden" id="inlineTagCreate">
+            <input type="text" class="input" id="inlineTagName" placeholder="${t('english.tagName')}" maxlength="20" style="width:100px;font-size:0.8rem">
+            <button class="btn btn-sm btn-primary" onclick="doCreateInlineTag()">${t('english.add')}</button>
+            <button class="btn btn-sm btn-outline" onclick="document.getElementById('inlineTagCreate').classList.add('hidden')">✕</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="vocab-list-header">
+        <span class="col-word">${t('english.vocabBook')}</span>
+        <span class="col-meaning">${t('english.chineseMeaning')}</span>
+        <span class="col-pos">${t('english.partOfSpeech')}</span>
+        <span class="col-level">${t('english.level')}</span>
+        <span class="col-tags">${t('english.tags')}</span>
+        <span class="col-actions"></span>
+      </div>
+      <div class="vocab-list" id="vocabList">
+        ${t('common.loading')}
+      </div>
+    </div>
+  `;
+  
+  const listEl = document.getElementById('vocabList');
+  if (listEl) listEl.innerHTML = await renderVocabList(words);
+  await loadTagFilter();
+  hideLoading();
+}
+
+function editMeaning(id) {
+  const meaning = document.getElementById(`meaning-${id}`);
+  const edit = document.getElementById(`edit-${id}`);
+  const posText = document.getElementById(`posText-${id}`);
+  const posEdit = document.getElementById(`posEdit-${id}`);
+  const editBtn = document.getElementById(`editBtn-${id}`);
+  const save = document.getElementById(`save-${id}`);
+  const cancel = document.getElementById(`cancel-${id}`);
+  if (!meaning || !edit || !posText || !posEdit || !editBtn || !save || !cancel) return;
+  meaning.classList.add('hidden');
+  edit.classList.remove('hidden');
+  posText.classList.add('hidden');
+  posEdit.classList.remove('hidden');
+  editBtn.style.display = 'none';
+  save.style.display = 'inline';
+  cancel.style.display = 'inline';
+  edit.focus();
+}
+
+async function saveMeaning(id) {
+  try {
+    const edit = document.getElementById(`edit-${id}`);
+    const posChecks = document.querySelectorAll(`#posEdit-${id} input:checked`);
+    if (!edit) return;
+    const newMeaning = edit.value.trim();
+    const newPOS = Array.from(posChecks).map(cb => cb.value).join(',');
+    const updates = {};
+    if (newMeaning !== undefined) updates.chinese_meaning = newMeaning;
+    if (newPOS) updates.part_of_speech = newPOS;
+    await updateWordEntry(id, updates);
+    
+    document.getElementById(`meaning-${id}`).textContent = newMeaning;
+    const posLabels = newPOS.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
+    document.getElementById(`posText-${id}`).textContent = posLabels;
+    
+    document.getElementById(`meaning-${id}`).classList.remove('hidden');
+    document.getElementById(`edit-${id}`).classList.add('hidden');
+    document.getElementById(`posText-${id}`).classList.remove('hidden');
+    document.getElementById(`posEdit-${id}`).classList.add('hidden');
+    document.getElementById(`editBtn-${id}`).style.display = 'inline';
+    document.getElementById(`save-${id}`).style.display = 'none';
+    document.getElementById(`cancel-${id}`).style.display = 'none';
+    
+    showToast('✅ 已儲存');
+  } catch (e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+function cancelEdit(id) {
+  document.getElementById(`meaning-${id}`).classList.remove('hidden');
+  document.getElementById(`edit-${id}`).classList.add('hidden');
+  document.getElementById(`posText-${id}`).classList.remove('hidden');
+  document.getElementById(`posEdit-${id}`).classList.add('hidden');
+  document.getElementById(`editBtn-${id}`).style.display = 'inline';
+  document.getElementById(`save-${id}`).style.display = 'none';
+  document.getElementById(`cancel-${id}`).style.display = 'none';
+}
+
+async function deleteVocabWord(id) {
+  if (!confirm(t('english.delete') + '?')) return;
+  try {
+    await deleteWord(id);
+    document.querySelector(`.vocab-row[data-id="${id}"]`)?.remove();
+    showToast('🗑️ ' + t('english.delete'));
+  } catch (e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+async function searchVocabList(query) {
+  await applyVocabFilter(query);
+}
+
+// Tag filter for vocab book
+let currentTagFilter = null;
+let vocabActiveTiers = ['newbee', 'well-tested', 'mastered'];
+
+async function loadTagFilter() {
+  const select = document.getElementById('tagFilter');
+  if (!select) return;
+  try {
+    const tags = await fetchTags();
+    select.innerHTML = `<option value="">🏷️ ${t('english.all')}</option>` +
+      tags.map(t => `<option value="${t.id}">${t.name}</option>`).join('') +
+      `<option value="__untagged">🚫 ${t('english.noTag')}</option>`;
+  } catch(e) { console.warn('Tag filter load failed:', e); }
+}
+
+async function showCreateTagInput() {
+  document.getElementById('inlineTagCreate').classList.remove('hidden');
+  document.getElementById('inlineTagName').focus();
+}
+
+async function doCreateInlineTag() {
+  const name = document.getElementById('inlineTagName').value.trim();
+  if (!name) return;
+  try {
+    await createTag(name);
+    document.getElementById('inlineTagName').value = '';
+    document.getElementById('inlineTagCreate').classList.add('hidden');
+    await loadTagFilter();
+    showToast(`✅ Tag "${name}" created`);
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+async function filterByTag(tagId) {
+  currentTagFilter = tagId || null;
+  const query = document.getElementById('vocabSearch')?.value || '';
+  await applyVocabFilter(query);
+}
+
+function toggleVocabTier(tier) {
+  const idx = vocabActiveTiers.indexOf(tier);
+  if (idx >= 0) {
+    vocabActiveTiers.splice(idx, 1);
+    document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.remove('active');
+  } else {
+    vocabActiveTiers.push(tier);
+    document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.add('active');
+  }
+  const query = document.getElementById('vocabSearch')?.value || '';
+  applyVocabFilter(query);
+}
+
+async function applyVocabFilter(query) {
+  let words = await searchVocabulary(query);
+  words = words.filter(w => {
+    const tier = w.level <= 2 ? 'newbee' : w.level <= 5 ? 'well-tested' : 'mastered';
+    return vocabActiveTiers.includes(tier);
+  });
+  if (currentTagFilter) {
+    if (currentTagFilter === '__untagged') {
+      const wordIds = words.map(w => w.id);
+      const tagMap = await fetchAllWordTags(wordIds);
+      words = words.filter(w => !tagMap[w.id] || tagMap[w.id].length === 0);
+    } else {
+      const { data } = await supabaseClient
+        .from('word_tags')
+        .select('word_id')
+        .eq('tag_id', currentTagFilter);
+      const taggedIds = new Set((data || []).map(d => d.word_id));
+      words = words.filter(w => taggedIds.has(w.id));
+    }
+  }
+  const list = document.getElementById('vocabList');
+  if (list) list.innerHTML = await renderVocabList(words);
+}
+
+// ============================================================
+// Add Words Page
+// ============================================================
+
+function showAddWordsPage() {
+  const content = document.getElementById('englishContent');
+  if (!content) return;
+  
+  content.innerHTML = `
+    <div class="add-words-page">
+      <h3>✏️ 輸入詞彙</h3>
+      <p class="guide">輸入詞彙，以逗號、空格或換行分隔（會自動忽略標點符號如 full stop）</p>
+      <textarea class="input textarea-input" id="manualWordInput" rows="6" 
+                placeholder="apple, banana, cat, dog, elephant&#10;Chinese, English, Peter"></textarea>
+      <div class="word-count" id="manualWordCount">0 words</div>
+      <button class="btn btn-primary" onclick="processManualInput()">${t('english.submit')}</button>
+      
+      <div id="addResult" class="add-result"></div>
+      <button class="btn btn-outline" onclick="openVocabularyBook()" style="margin-top: 1rem;">
+        ${t('english.back')}
+      </button>
+    </div>
+  `;
+  
+  document.getElementById('manualWordInput').addEventListener('input', function() {
+    const words = this.value.trim().split(/[,\s\n]+/).filter(w => w.trim().length > 0);
+    document.getElementById('manualWordCount').textContent = `${words.length} words`;
+  });
+}
+
+async function processManualInput() {
+  const text = document.getElementById('manualWordInput').value.trim();
+  if (!text) return;
+  
+  showLoading();
+  try {
+    const raw = text.split(/[,\s\n]+/).map(w => w.replace(/[^a-zA-Z]/g, '')).filter(w => w.length > 1);
+    if (!raw.length) { hideLoading(); return; }
+    
+    const seen = new Set();
+    const unique = [];
+    const originalMap = {};
+    for (const w of raw) {
+      const lower = w.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        unique.push(lower);
+        originalMap[lower] = w;
+      }
+    }
+    if (!unique.length) {
+      hideLoading();
+      document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>';
+      return;
+    }
+    
+    const allWords = await fetchVocabulary();
+    const existingMap = {};
+    for (const v of allWords) {
+      existingMap[v.word.toLowerCase()] = v;
+    }
+    
+    const words = [];
+    for (const lower of unique) {
+      const orig = originalMap[lower];
+      const existing = existingMap[lower];
+      let status = 'new';
+      if (existing) {
+        status = 'duplicate';
+      } else if (isLikelyName(lower)) {
+        status = 'name';
+      } else if (!isLikelyValidWord(lower)) {
+        status = 'error';
+      }
+      words.push({
+        word: orig,
+        lower: lower,
+        meaning: existing ? (existing.chinese_meaning || '') : '',
+        pos: status === 'name' ? 'name' : (existing ? (existing.part_of_speech || detectPOS(lower).join(',')) : detectPOS(lower).join(',')),
+        status: status,
+        existingId: existing ? existing.id : null,
+        tagIds: [],
+        tagId: ''
+      });
+    }
+    
+    const needMeaning = words.filter(w => w.status === 'new' && !w.meaning);
+    if (needMeaning.length > 0) {
+      try {
+        const aiWords = needMeaning.map(w => ({ normalized: w.lower, meaning: '' }));
+        await callAIBatchMeanings(aiWords);
+        for (const w of needMeaning) {
+          const match = aiWords.find(a => a.normalized === w.lower);
+          if (match && match.meaning) w.meaning = match.meaning;
+        }
+      } catch (e) {
+        console.warn('AI translation failed:', e);
+      }
+    }
+    
+    hideLoading();
+    document.getElementById('manualWordInput').value = '';
+    document.getElementById('manualWordCount').textContent = '0 words';
+    showWordReviewPage(words);
+  } catch (e) {
+    hideLoading();
+    console.error('processManualInput error:', e);
+    document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
+  }
+}
+
+// ============================================================
+// Article input
+// ============================================================
+
+const CONTRACTIONS = {
+  "doesn't": "does not", "don't": "do not", "can't": "cannot", "couldn't": "could not",
+  "wouldn't": "would not", "shouldn't": "should not", "won't": "will not",
+  "wasn't": "was not", "weren't": "were not", "hasn't": "has not", "haven't": "have not",
+  "hadn't": "had not", "didn't": "did not", "isn't": "is not", "aren't": "are not",
+  "mightn't": "might not", "mustn't": "must not", "needn't": "need not",
+  "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is",
+  "it's": "it is", "we're": "we are", "they're": "they are",
+  "i've": "i have", "you've": "you have", "we've": "we have", "they've": "they have",
+  "i'll": "i will", "you'll": "you will", "he'll": "he will", "she'll": "she will",
+  "we'll": "we will", "they'll": "they will",
+  "i'd": "i would", "you'd": "you would", "he'd": "he would", "she'd": "she would",
+  "we'd": "we would", "they'd": "they would"
+};
+
+async function processArticleInput() {
+  const text = document.getElementById('articleWordInput').value.trim();
+  if (!text) return;
+  
+  showLoading();
+  try {
+    let raw = text.replace(/[^\w\s'-]/g, ' ').split(/\s+/).filter(w => w.length > 1 && /^[a-zA-Z]/.test(w));
+    if (!raw.length) { hideLoading(); document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; return; }
+    
+    const expanded = [];
+    for (const w of raw) {
+      expanded.push(...(CONTRACTIONS[w.toLowerCase()] || w).split(' '));
+    }
+    
+    const seen = new Set();
+    const unique = [];
+    for (const w of expanded) {
+      const lower = w.toLowerCase();
+      if (!seen.has(lower)) { seen.add(lower); unique.push(lower); }
+    }
+    if (!unique.length) { hideLoading(); document.getElementById('addResult').innerHTML = '<div class="result-info">No valid words</div>'; return; }
+    
+    let normalized = [];
+    try {
+      normalized = await callAIBatchNormalize(unique.slice(0, 100));
+    } catch (e) {
+      console.warn('AI normalize failed, using original words:', e);
+      normalized = unique.map(w => ({ original: w, normalized: w, pos: detectPOS(w) }));
+    }
+    const seenNorm = new Set();
+    const uniqueNorm = [];
+    for (const w of normalized) {
+      if (!seenNorm.has(w.normalized) && w.normalized.length > 1) {
+        seenNorm.add(w.normalized);
+        uniqueNorm.push({ word: w.normalized, pos: w.pos || detectPOS(w.normalized), original: w.original });
+      }
+    }
+    const wordTexts = uniqueNorm.map(w => w.word);
+    if (!wordTexts.length) {
+      hideLoading();
+      document.getElementById('addResult').innerHTML = '<div class="result-info">No new words to add</div>';
+      return;
+    }
+    
+    let words = [];
+    try {
+      words = await classifyAndPrepareWords(wordTexts);
+    } catch (e) {
+      console.warn('Classification failed, showing raw words:', e);
+      words = wordTexts.map(w => ({
+        original: w, word: w, meaning: '',
+        pos: detectPOS(w).join(','),
+        status: 'new', existingId: null, existingData: null,
+        tagIds: [], editing: false
+      }));
+    }
+    for (const w of words) {
+      const match = uniqueNorm.find(u => u.word === w.word);
+      if (match && match.pos) w.pos = match.pos;
+    }
+    hideLoading();
+    document.getElementById('articleWordInput').value = '';
+    document.getElementById('articleWordCount').textContent = '0 words';
+    showWordReviewPage(words);
+  } catch (e) {
+    hideLoading();
+    console.error('processArticleInput error:', e);
+    document.getElementById('addResult').innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
+  }
+}
+
+// ============================================================
+// Classification & AI batch meaning
+// ============================================================
+
+async function classifyAndPrepareWords(wordTexts) {
+  const allWords = await fetchVocabulary();
+  const existingMap = {};
+  for (const v of allWords) {
+    existingMap[v.word.toLowerCase()] = v;
+  }
+  
+  const words = wordTexts.map(w => {
+    const norm = normalizeWord(w);
+    const existing = existingMap[norm];
+    let status = 'new';
+    if (existing) {
+      status = 'duplicate';
+    } else if (!isLikelyValidWord(norm) || (w !== norm && !isLikelyValidWord(w))) {
+      status = 'error';
+    } else if (isLikelyName(norm)) {
+      status = 'name';
+    }
+    return {
+      original: w,
+      word: norm,
+      meaning: existing ? (existing.chinese_meaning || '') : '',
+      pos: status === 'name' ? 'name' : (existing ? (existing.part_of_speech || detectPOS(norm).join(',')) : detectPOS(norm).join(',')),
+      status: status,
+      existingId: existing ? existing.id : null,
+      existingData: existing || null,
+      tagIds: [],
+      editing: false
+    };
+  });
+  
+  const needMeaning = words.filter(w => w.status === 'new' && !w.meaning);
+  if (needMeaning.length > 0) {
+    const aiWords = needMeaning.map(w => ({ normalized: w.word, meaning: '' }));
+    await callAIBatchMeanings(aiWords);
+    for (const w of needMeaning) {
+      const match = aiWords.find(a => a.normalized === w.word);
+      if (match && match.meaning) w.meaning = match.meaning;
+    }
+  }
+  
+  const dupIds = words.filter(w => w.status === 'duplicate' && w.existingId).map(w => w.existingId);
+  if (dupIds.length > 0) {
+    try {
+      const tagMap = await fetchAllWordTags(dupIds);
+      for (const w of words) {
+        if (w.existingId && tagMap[w.existingId]) {
+          w.existingTags = tagMap[w.existingId];
+        }
+      }
+    } catch(e) { console.warn('Tag fetch failed:', e); }
+  }
+  
+  return words;
+}
+
+// ============================================================
+// Word Review Page
+// ============================================================
+
+let reviewData = { words: [], selectedTagId: null, allTags: [] };
+
+function showWordReviewPage(words) {
+  reviewData.words = words;
+  reviewData.selectedTagId = null;
+
+  const content = document.getElementById('englishContent');
+  if (!content) return;
+
+  fetchTags().then(tags => { reviewData.allTags = tags; });
+
+  const success = words.filter(w => w.status === 'new' || w.status === 'duplicate');
+  const names = words.filter(w => w.status === 'name');
+  const errors = words.filter(w => w.status === 'error');
+
+  content.innerHTML = `
+    <div class="review-page">
+      <h3>✏️ ${t('english.reviewWords')}</h3>
+      
+      <div class="review-sections">
+        <div class="review-section review-section-success">
+          <div class="review-section-header">✅ 成功輸入 (${success.length})</div>
+          <div class="review-section-body" id="reviewSuccessList">
+            ${success.length ? success.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('') : '<div class="review-col-empty">沒有詞彙</div>'}
+          </div>
+        </div>
+
+        <div class="review-section review-section-name">
+          <div class="review-section-header">👤 人名/地名 (${names.length})</div>
+          <div class="review-section-body" id="reviewNameList">
+            ${names.length ? names.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('') : '<div class="review-col-empty">沒有詞彙</div>'}
+          </div>
+        </div>
+
+        <div class="review-section review-section-error">
+          <div class="review-section-header">❌ 錯誤輸入 (${errors.length})</div>
+          <div class="review-section-body" id="reviewErrorList">
+            ${errors.length ? errors.map((w, i) => renderReviewWordRow(w, reviewData.words.indexOf(w))).join('') : '<div class="review-col-empty">沒有詞彙</div>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="review-actions" style="margin-top:1rem">
+        <button class="btn btn-primary" onclick="completeReview()">✅ ${t('english.complete')} (${success.length + names.length})</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderReviewWordRow(w, idx) {
+  const posLabels = w.pos ? w.pos.split(',').map(p => POS_MAP[p]?.[currentLang] || p).join(', ') : '';
+  const tagOptions = reviewData.allTags.map(t =>
+    `<option value="${t.id}" ${w.tagId === t.id ? 'selected' : ''}>${t.name}</option>`
+  ).join('');
+
+  return `
+    <div class="review-word-row" data-idx="${idx}">
+      <div class="review-word-info">
+        <button class="btn-icon" onclick="editReviewWord(${idx})" title="✏️">✏️</button>
+        <span class="review-word-word"><strong>${w.word}</strong></span>
+        <span class="review-word-meaning" onclick="inlineEditMeaning(${idx})" title="按一下編輯中文意思">📖 <span id="meaningDisplay-${idx}">${w.meaning || '—'}</span></span>
+        <span class="review-word-pos" onclick="inlineEditPOS(${idx})" title="按一下編輯詞性">🔤 <span id="posDisplay-${idx}">${posLabels}</span></span>
+        <select class="input review-word-tag-select" onchange="onReviewWordTagChange(${idx}, this.value)" style="max-width:110px;font-size:0.8rem">
+          <option value="">🏷️ —</option>
+          ${tagOptions}
+        </select>
+      </div>
+      <div class="review-word-row-actions">
+        <button class="btn-icon" onclick="deleteReviewWord(${idx})" title="🗑️">🗑️</button>
+        ${w.status === 'error' ? `<button class="btn-icon" onclick="fixReviewWord(${idx})" title="🔧 修正">🔧</button>` : ''}
+        ${w.status === 'name' ? `<button class="btn-icon" onclick="keepReviewWord(${idx})" title="✅ 保留">✅</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function inlineEditMeaning(idx) {
+  const w = reviewData.words[idx];
+  if (!w) return;
+  const display = document.getElementById(`meaningDisplay-${idx}`);
+  if (!display) return;
+  const current = w.meaning || '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.className = 'input inline-edit-input';
+  input.style.width = '150px';
+  input.onblur = function() {
+    w.meaning = this.value.trim();
+    display.textContent = w.meaning || '—';
+    this.replaceWith(display);
+  };
+  input.onkeydown = function(e) {
+    if (e.key === 'Enter') this.blur();
+    if (e.key === 'Escape') { this.value = current; this.blur(); }
+  };
+  display.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function inlineEditPOS(idx) {
+  const w = reviewData.words[idx];
+  if (!w) return;
+  const display = document.getElementById(`posDisplay-${idx}`);
+  if (!display) return;
+  const current = w.pos || '';
+  const input = document.createElement('select');
+  input.className = 'input inline-edit-input';
+  input.style.width = '120px';
+  input.innerHTML = Object.entries(POS_MAP).map(([key, val]) =>
+    `<option value="${key}" ${current === key ? 'selected' : ''}>${val[currentLang] || key}</option>`
+  ).join('');
+  input.onblur = function() {
+    w.pos = this.value;
+    const newLabel = POS_MAP[w.pos]?.[currentLang] || w.pos;
+    display.textContent = newLabel;
+    this.replaceWith(display);
+  };
+  input.onkeydown = function(e) {
+    if (e.key === 'Escape') { this.value = current; this.blur(); }
+  };
+  display.replaceWith(input);
+  input.focus();
+}
+
+function onReviewWordTagChange(idx, tagId) {
+  if (reviewData.words[idx]) reviewData.words[idx].tagId = tagId;
+}
+
+function editReviewWord(idx) {
+  const w = reviewData.words[idx];
+  const newWord = prompt('修改英文詞彙:', w.word);
+  if (newWord && newWord.trim()) {
+    w.word = newWord.trim().toLowerCase();
+    w.lower = w.word;
+    const newMeaning = prompt('修改中文意思:', w.meaning || '');
+    if (newMeaning !== null) w.meaning = newMeaning.trim();
+    refreshReviewPage();
+  }
+}
+
+function deleteReviewWord(idx) {
+  reviewData.words.splice(idx, 1);
+  refreshReviewPage();
+}
+
+function fixReviewWord(idx) {
+  const w = reviewData.words[idx];
+  const newWord = prompt('修正英文詞彙:', w.word);
+  if (!newWord || !newWord.trim()) return;
+  const lower = newWord.trim().toLowerCase();
+  w.word = newWord.trim();
+  w.lower = lower;
+  if (isLikelyValidWord(lower) && !isLikelyName(lower)) {
+    w.status = 'new';
+    w.meaning = '';
+  } else if (isLikelyName(lower)) {
+    w.status = 'name';
+  }
+  refreshReviewPage();
+}
+
+function keepReviewWord(idx) {
+  const w = reviewData.words[idx];
+  w.status = 'new';
+  refreshReviewPage();
+}
+
+function refreshReviewPage() {
+  showWordReviewPage(reviewData.words);
+}
+
+async function completeReview() {
+  showLoading();
+  try {
+    const allWords = await fetchVocabulary();
+    const existingMap = {};
+    for (const v of allWords) {
+      existingMap[v.word.toLowerCase()] = v;
+    }
+    for (const w of reviewData.words) {
+      const norm = normalizeWord(w.word);
+      const existing = existingMap[norm];
+      w.word = norm;
+      if (existing) {
+        w.status = 'duplicate';
+        w.existingId = existing.id;
+        w.existingData = existing;
+      } else if (!isLikelyValidWord(norm)) {
+        w.status = 'error';
+        w.existingId = null; w.existingData = null;
+      } else if (isLikelyName(norm)) {
+        w.status = 'name';
+        w.existingId = null; w.existingData = null;
+      } else {
+        w.status = 'new';
+        w.existingId = null; w.existingData = null;
+      }
+    }
+    
+    const newWords = reviewData.words.filter(w => w.status === 'new');
+    const nameWords = reviewData.words.filter(w => w.status === 'name');
+    const duplicates = reviewData.words.filter(w => w.status === 'duplicate');
+    const errors = reviewData.words.filter(w => w.status === 'error');
+    
+    for (const d of duplicates) {
+      if (d.existingId && (d.meaning || d.pos)) {
+        const updates = {};
+        if (d.meaning && d.meaning !== (d.existingData?.chinese_meaning || '')) {
+          updates.chinese_meaning = d.meaning;
+        }
+        if (d.pos && d.pos !== (d.existingData?.part_of_speech || '')) {
+          updates.part_of_speech = d.pos;
+        }
+        if (Object.keys(updates).length > 0) {
+          await updateWordEntry(d.existingId, updates);
+        }
+      }
+    }
+    
+    const allNew = [...newWords, ...nameWords];
+    let addResult = { added: 0, duplicates: 0 };
+    if (allNew.length > 0) {
+      const wordObjs = allNew.map(w => ({
+        word: w.word,
+        pos: w.pos || detectPOS(w.word).join(','),
+        meaning: w.meaning || ''
+      }));
+      addResult = await bulkAddWords(wordObjs, null);
+      
+      if (addResult.addedIds && addResult.addedIds.length > 0) {
+        for (let i = 0; i < allNew.length; i++) {
+          const tagId = allNew[i].tagId;
+          if (tagId && addResult.addedIds[i]) {
+            try {
+              await addTagToWord(addResult.addedIds[i], tagId);
+            } catch(e) { console.warn('Tag assign failed:', e); }
+          }
+        }
+      }
+    }
+    
+    const parts = [];
+    if (addResult.added > 0) parts.push(`✅ ${addResult.added} new`);
+    if (errors.length > 0) parts.push(`❌ ${errors.length} skipped`);
+    showToast(parts.join(' · ') || '✅ ' + t('english.wordAdded'));
+    openVocabularyBook();
+  } catch (e) {
+    showToast('❌ ' + e.message);
+  }
+  hideLoading();
+}
+
+// ============================================================
+// Review Tag Selection
+// ============================================================
+
+async function loadReviewTagOptions() {
+  const select = document.getElementById('reviewTagSelect');
+  if (!select) return;
+  try {
+    const tags = await fetchTags();
+    const currentVal = select.value;
+    select.innerHTML = `<option value="">— ${t('english.noTag')} —</option>` +
+      tags.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    if (currentVal) select.value = currentVal;
+  } catch(e) { console.warn('Load tags failed:', e); }
+}
+
+function onReviewTagChange(tagId) {
+  reviewData.selectedTagId = tagId || null;
+}
+
+function showNewReviewTagInput() {
+  document.getElementById('reviewNewTag').classList.remove('hidden');
+}
+
+async function createReviewTag() {
+  const name = document.getElementById('reviewTagName').value.trim();
+  if (!name) return;
+  try {
+    const tag = await createTag(name);
+    document.getElementById('reviewTagName').value = '';
+    document.getElementById('reviewNewTag').classList.add('hidden');
+    await loadReviewTagOptions();
+    document.getElementById('reviewTagSelect').value = tag.id;
+    reviewData.selectedTagId = tag.id;
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+// ============================================================
+// Vocab Book Tag Rendering (async version with tag badges)
+// ============================================================
+
+async function renderVocabList(words) {
+  if (!words.length) {
+    return `<div class="empty-state">${t('common.placeholders')}</div>`;
+  }
+  
+  const wordIds = words.map(w => w.id).filter(Boolean);
+  let tagMap = {};
+  if (wordIds.length > 0) {
+    try { tagMap = await fetchAllWordTags(wordIds); } catch(e) {}
+  }
+  
+  return words.map(w => {
+    const posArr = w.part_of_speech ? w.part_of_speech.split(',') : [];
+    const posLabels = posArr.map(p => POS_MAP[p]?.[currentLang] || p).join(', ');
+    const tierLabel = getTierLabel(w.level);
+    const allPOS = Object.keys(POS_MAP);
+    const tags = tagMap[w.id] || [];
+    const tagHtml = tags.map(t => 
+      `<span class="tag-badge" style="background:${t.color || '#6366f1'}20;color:${t.color || '#6366f1'}" onclick="event.stopPropagation();showWordTagManager('${w.id}')">${t.name}</span>`
+    ).join('');
+    
+    return `
+      <div class="vocab-row" data-id="${w.id}">
+        <span class="col-word"><strong>${w.word}</strong></span>
+        <span class="col-meaning">
+          <span class="meaning-text" id="meaning-${w.id}">${w.chinese_meaning || ''}</span>
+          <input class="input edit-input hidden" id="edit-${w.id}" value="${w.chinese_meaning || ''}">
+        </span>
+        <span class="col-pos">
+          <span class="pos-text" id="posText-${w.id}">${posLabels}</span>
+          <div class="pos-edit hidden" id="posEdit-${w.id}">
+            ${allPOS.map(p => `
+              <label class="pos-checkbox">
+                <input type="checkbox" value="${p}" ${posArr.includes(p) ? 'checked' : ''}>
+                ${POS_MAP[p]?.[currentLang] || p}
+              </label>
+            `).join('')}
+          </div>
+        </span>
+        <span class="col-level">
+          <span class="level-badge level-${w.level}">${tierLabel}</span>
+        </span>
+        <span class="col-tags">${tagHtml || ''}</span>
+        <span class="col-actions">
+          <button class="btn-icon" onclick="showWordTagManager('${w.id}')" title="${t('english.tags')}">🏷️</button>
+          <button class="btn-icon" onclick="editMeaning('${w.id}')" id="editBtn-${w.id}" title="${t('english.edit')}">✏️</button>
+          <button class="btn-icon" onclick="saveMeaning('${w.id}')" id="save-${w.id}" style="display:none" title="${t('english.save')}">💾</button>
+          <button class="btn-icon" onclick="cancelEdit('${w.id}')" id="cancel-${w.id}" style="display:none" title="${t('english.cancel')}">❌</button>
+          <button class="btn-icon" onclick="deleteVocabWord('${w.id}')" title="${t('english.delete')}">🗑️</button>
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================================
+// Word Tag Manager Modal
+// ============================================================
+
+async function showWordTagManager(wordId) {
+  const word = document.querySelector(`.vocab-row[data-id="${wordId}"] .col-word`);
+  const wordName = word ? word.textContent.trim() : '';
+  
+  const tags = await fetchTags();
+  const wordTags = await fetchWordTags(wordId);
+  const wordTagIds = new Set(wordTags.map(t => t.id));
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'tag-manager-overlay';
+  overlay.innerHTML = `
+    <div class="tag-manager-modal">
+      <div class="tag-manager-header">
+        <strong>🏷️ ${t('english.tags')}: ${wordName}</strong>
+        <button class="btn-icon" onclick="this.closest('.tag-manager-overlay').remove()">✕</button>
+      </div>
+      <div class="tag-manager-body">
+        ${tags.map(t => `
+          <label class="tag-manager-item ${wordTagIds.has(t.id) ? 'selected' : ''}">
+            <input type="checkbox" ${wordTagIds.has(t.id) ? 'checked' : ''}
+                   onchange="toggleWordTag('${wordId}', '${t.id}', this.checked)">
+            <span class="tag-badge" style="background:${t.color}20;color:${t.color}">${t.name}</span>
+          </label>
+        `).join('')}
+        ${!tags.length ? `<div class="review-col-empty">${t('common.placeholders')}</div>` : ''}
+      </div>
+      <div class="tag-manager-footer">
+        <button class="btn btn-sm btn-outline" onclick="this.closest('.tag-manager-overlay').remove()">${t('english.complete')}</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteWordTagManager('${wordId}')">🗑️ ${t('english.deleteTag')}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+async function toggleWordTag(wordId, tagId, add) {
+  try {
+    if (add) {
+      await addTagToWord(wordId, tagId);
+    } else {
+      await removeTagFromWord(wordId, tagId);
+    }
+    await refreshVocabRowTags(wordId);
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+async function refreshVocabRowTags(wordId) {
+  const row = document.querySelector(`.vocab-row[data-id="${wordId}"]`);
+  if (!row) return;
+  const tagsEl = row.querySelector('.col-tags');
+  if (!tagsEl) return;
+  try {
+    const tags = await fetchWordTags(wordId);
+    if (tags.length > 0) {
+      tagsEl.innerHTML = tags.map(t => 
+        `<span class="tag-badge" style="background:${t.color || '#6366f1'}20;color:${t.color || '#6366f1'}">${t.name}</span>`
+      ).join('');
+    } else {
+      tagsEl.innerHTML = '<span class="text-light" style="font-size:0.75rem">—</span>';
+    }
+  } catch(e) {
+    console.warn('Refresh tags failed:', e);
+  }
+}
+
+async function deleteWordTagManager(wordId) {
+  const tags = await fetchTags();
+  const tagNames = tags.map((t, i) => `${i+1}. ${t.name}`).join('\n');
+  const input = prompt(`Which tag to delete?\n${tagNames}\n\nEnter tag number or name:`);
+  if (!input) return;
+  const idx = parseInt(input) - 1;
+  const tag = tags[idx] || tags.find(t => t.name === input);
+  if (!tag) { showToast('❌ Tag not found'); return; }
+  try {
+    await removeTagFromWord(wordId, tag.id);
+    showToast(`✅ Removed tag "${tag.name}"`);
+    document.querySelector('.tag-manager-overlay')?.remove();
+    showWordTagManager(wordId);
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
