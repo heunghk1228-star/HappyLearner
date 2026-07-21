@@ -168,8 +168,10 @@ function renderMiniCard(word) {
           <div class="sound-row">
             <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordSlow('${word.word}')" title="🐢 ${t('english.slow')}">🐢</button>
             <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordFast('${word.word}')" title="🐇 ${t('english.fast')}">🐇</button>
+            <button class="sound-btn-sm sound-out-btn" onclick="event.stopPropagation(); soundOutWord('${word.word}', '${word.id}')" title="${t('english.soundOut')}">🔊 A-B-C</button>
           </div>
           <div class="grid-tier">${tierLabel}</div>
+          <div class="sound-out-display" id="soundOut-${word.id}"></div>
         </div>
         <div class="grid-card-back">
           <div class="grid-meaning">${word.chinese_meaning || '<span class="text-light">(未有翻譯)</span>'}</div>
@@ -356,6 +358,77 @@ function speakWordSlow(word) {
 
 function speakWordFast(word) {
   speakWord(word, getFastRate());
+}
+
+function soundOutWord(word, id) {
+  if (!('speechSynthesis' in window)) {
+    showToast('🔇 ' + (t('english.speechUnavailable') || 'Speech not available'));
+    return;
+  }
+  
+  // Cancel any ongoing speech
+  window.speechSynthesis.cancel();
+  
+  // Split into letters
+  const letters = word.split('');
+  const display = document.getElementById('soundOut-' + id);
+  if (display) {
+    display.innerHTML = '<span class="sound-out-letters">' + letters.map((l, i) =>
+      '<span class="sound-out-letter" data-idx="' + i + '">' + l + '</span>'
+    ).join('<span class="sound-out-sep">-</span>') + '</span>';
+    display.classList.add('active');
+  }
+  
+  // Speak each letter with a delay
+  let delay = 0;
+  letters.forEach((letter, idx) => {
+    const utterance = new SpeechSynthesisUtterance(letter);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.5;
+    utterance.pitch = 1.2;
+    utterance.volume = 1.0;
+    
+    if (display) {
+      utterance.onstart = () => {
+        display.querySelectorAll('.sound-out-letter').forEach(s => s.classList.remove('speaking'));
+        const span = display.querySelector('.sound-out-letter[data-idx="' + idx + '"]');
+        if (span) span.classList.add('speaking');
+      };
+    }
+    
+    setTimeout(() => {
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn('Sound-out speech failed:', e);
+      }
+    }, delay);
+    delay += 400;
+  });
+  
+  // Speak the full word at the end
+  setTimeout(() => {
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.7;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Sound-out final speech failed:', e);
+    }
+    // Clear highlight after full word
+    setTimeout(() => {
+      if (display) {
+        display.querySelectorAll('.sound-out-letter').forEach(s => s.classList.remove('speaking'));
+        setTimeout(() => {
+          display.classList.remove('active');
+          display.innerHTML = '';
+        }, 2000);
+      }
+    }, 1000);
+  }, delay);
 }
 
 function testSpeechVoice() {

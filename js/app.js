@@ -246,15 +246,17 @@ async function loadStreakDisplay() {
   if (!currentUser) { el.classList.add('hidden'); return; }
   const checkedIn = await getTodayCheckIn();
   const streak = await getCheckInStreak();
+  const wordsThisMonth = await getWordsThisMonth();
   el.classList.remove('hidden');
   el.innerHTML = `
-    <div class="streak-info">
-      🔥 <strong>${t('english.dayStreak')}: ${streak}</strong>
+    <div class="growth-bar">
+      <div class="growth-primary">
+        ${t('english.wordsThisMonth').replace('{n}', wordsThisMonth)}
+      </div>
+      <div class="growth-secondary">
+        🔥 ${t('english.dayStreak')}: ${streak} ${checkedIn ? '· ✅ ' + t('english.checkInToday') : '· 📝 ' + t('english.checkIn')}
+      </div>
     </div>
-    ${checkedIn 
-      ? `<div class="checked-in">✅ ${t('english.checkInToday')}</div>`
-      : `<span class="streak-pending">📝 完成溫習測驗即可打卡</span>`
-    }
   `;
 }
 

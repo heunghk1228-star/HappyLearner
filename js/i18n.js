@@ -16,7 +16,7 @@ const I18N = {
       title: '聰明複習，輕鬆累積：專為小學生設計的學習成長平台',
       subtitle: 'Happy Learner 的誕生，源於一位父親對小一女兒的愛與堅持。\n\n我們結合科學記憶曲線與教育實踐，打造真正懂得孩子學習規律的聰明工具，讓背單字變成一場有成就感的探索。',
       philosophy_title: '為什麼選擇 Happy Learner？',
-      philosophy: '面對坊間死板、流於表面的學習工具，我們深深明白：死記硬背無法讓孩子真正掌握語言。背熟字母只是第一步，懂得如何在句型中運用，才是語言學習的本質。\n\n我們將艾賓浩斯記憶曲線（Forgetting Curve）與情境填空練習相結合，並融入「客製化字詞庫」與「每日打卡機制」，幫助孩子在黃金時間內複習、深化理解，一步步建立自信與自主學習的良好習慣。',
+      philosophy: '我們明白，死記硬背只會抹煞孩子的語感。背熟字母只是起點，能看懂、聽懂並在生活中運用，才是語言學習的本質。\n\nHappy Learner 專為小學生打造「聽—拼—用」三位一體的學習閉環：結合自然發音（Phonics）強化音韻連結，透過艾賓浩斯記憶曲線在黃金時間自動安排複習，並搭配生活化語境填空。我們不只幫孩子應付學校默書，更透過微小而持續的成就感，陪伴他們一步步建立自主學習的終身習慣。',
       features: '平台三大核心特色',
       feature1_title: '科學記憶曲線',
       feature1_desc: '結合記憶曲線原理，自動為孩子安排最佳複習時機。配合 Flash Cards 圖像卡片與語境填空，不只「會串字」，更懂得「會運用」。',
@@ -154,6 +154,8 @@ const I18N = {
       deleteTag: '刪除標籤',
       tagAllNote: '所選標籤會套用到所有新字詞',
       autoVoice: '自動選擇',
+      soundOut: '🔊 發音拆解',
+      wordsThisMonth: '🎯 你這個月已經解鎖了 {n} 個生字！',
       inputGuide: '輸入詞彙或整篇文章，AI 會自動提取生字'
     },
     math: {
@@ -217,7 +219,7 @@ const I18N = {
       title: '聪明复习，轻松累积：专为小学生设计的学习成长平台',
       subtitle: 'Happy Learner 的诞生，源于一位父亲对小一女儿的爱与坚持。\n\n我们结合科学记忆曲线与教育实践，打造真正懂得孩子学习规律的聪明工具，让背单词变成一场有成就感的探索。',
       philosophy_title: '为什么选择 Happy Learner？',
-      philosophy: '面对坊间死板、流于表面的学习工具，我们深深明白：死记硬背无法让孩子真正掌握语言。背熟字母只是第一步，懂得如何在句型中运用，才是语言学习的本质。\n\n我们将艾宾浩斯记忆曲线（Forgetting Curve）与情境填空练习相结合，并融入「客制化字词库」与「每日打卡机制」，帮助孩子在黄金时间内复习、深化理解，一步步建立自信与自主学习的良好习惯。',
+      philosophy: '我们明白，死记硬背只会抹煞孩子的语感。背熟字母只是起点，能看懂、听懂并在生活中运用，才是语言学习的本质。\n\nHappy Learner 专为小学生打造「听—拼—用」三位一体的学习闭环：结合自然发音（Phonics）强化音韵连结，透过艾宾浩斯记忆曲线在黄金时间自动安排复习，并搭配生活化语境填空。我们不只帮孩子应付学校默书，更透过微小而持续的成就感，陪伴他们一步步建立自主学习的终身习惯。',
       features: '平台三大核心特色',
       feature1_title: '科学记忆曲线',
       feature1_desc: '结合记忆曲线原理，自动为孩子安排最佳复习时机。配合 Flash Cards 图像卡片与语境填空，不只「会串字」，更懂得「会运用」。',
@@ -355,6 +357,8 @@ const I18N = {
       deleteTag: '删除标签',
       tagAllNote: '所选标签会套用到所有新字词',
       autoVoice: '自动选择',
+      soundOut: '🔊 发音拆解',
+      wordsThisMonth: '🎯 你这个月已经解锁了 {n} 个生字！',
       inputGuide: '输入词汇或整篇文章，AI 会自动提取生字'
     },
     math: { title: '数学', comingSoon: '即将推出...',
@@ -406,7 +410,7 @@ const I18N = {
       title: 'Smart Revision, Easy Growth: A Learning Platform Designed for Elementary Students',
       subtitle: 'Happy Learner was born from a parent\'s love and dedication for their first-grade daughter.\n\nWe combine the science of memory curves with educational practice to create smart tools that truly understand how children learn — turning vocabulary building into a rewarding journey of discovery.',
       philosophy_title: 'Why Choose Happy Learner?',
-      philosophy: 'Facing rigid, superficial learning tools on the market, we deeply understand: rote memorization alone cannot help children truly master a language. Knowing letters is just the first step — knowing how to use words in sentences is the essence of language learning.\n\nWe combine the Ebbinghaus Forgetting Curve with contextual fill-in-the-blank exercises, integrated with a personalized vocabulary bank and a daily check-in system. This helps children review at optimal times, deepen their understanding, and gradually build confidence and self-directed learning habits.',
+      philosophy: 'We understand that rote memorization only kills a child\'s language intuition. Knowing letters is just the starting point — being able to read, listen, understand, and use words in real life is the essence of language learning.\n\nHappy Learner creates a "Listen—Spell—Use" learning loop designed for elementary students: combining Phonics to strengthen phonemic connection, leveraging the Ebbinghaus Forgetting Curve to schedule reviews at optimal times, and pairing it with contextual fill-in-the-blank exercises. We don\'t just help children prepare for school dictation — through small, consistent achievements, we accompany them in building lifelong self-directed learning habits.',
       features: 'Three Core Features',
       feature1_title: 'Scientific Memory Curve',
       feature1_desc: 'Leveraging the memory curve principle, the system automatically schedules the best review times. With Flash Cards and contextual exercises, children don\'t just spell words — they learn to use them.',
@@ -543,6 +547,8 @@ const I18N = {
       deleteTag: 'Delete Tag',
       tagAllNote: 'Selected tag will be applied to ALL new words',
       autoVoice: 'Auto',
+      soundOut: '🔊 Sound Out',
+      wordsThisMonth: '🎯 You\'ve unlocked {n} words this month!',
       inputGuide: 'Enter words or a full article — AI will extract vocabulary'
     },
     math: { title: 'Math', comingSoon: 'Coming soon...',

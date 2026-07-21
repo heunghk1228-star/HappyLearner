@@ -705,6 +705,19 @@ async function getCheckInStreak() {
   return streak;
 }
 
+async function getWordsThisMonth() {
+  if (!currentUser) return 0;
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const { count, error } = await supabaseClient
+    .from('vocabulary')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', currentUser.id)
+    .gte('created_at', startOfMonth);
+  if (error) { console.warn('getWordsThisMonth error:', error); return 0; }
+  return count || 0;
+}
+
 // ============================================================
 // AI: Batch Chinese meaning generation
 // ============================================================
