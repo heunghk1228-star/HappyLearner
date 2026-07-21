@@ -898,43 +898,10 @@ body {
   border-color: var(--primary);
 }
 
-.sound-out-btn {
-  border-radius: 12px;
-  width: auto;
-  padding: 0 8px;
-  font-size: 0.75rem;
-  gap: 2px;
-}
-
-.sound-out-display {
-  min-height: 0;
-  text-align: center;
-  font-size: 0.85rem;
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.sound-out-display.active {
-  min-height: 1.5rem;
-  margin-top: 0.25rem;
-}
-
-.sound-out-letters {
-  display: inline-flex;
-  gap: 4px;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--primary);
-  letter-spacing: 2px;
-}
-
-.sound-out-letter {
-  transition: all 0.2s;
-}
-
-.sound-out-letter.speaking {
-  color: var(--accent);
-  transform: scale(1.2);
+.sound-btns-row .sound-btn-large {
+  width: 44px;
+  height: 44px;
+  font-size: 1.3rem;
 }
 
 .grid-tier {
