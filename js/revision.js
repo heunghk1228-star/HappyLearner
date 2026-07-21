@@ -180,12 +180,12 @@ async function showWordSelection(words) {
     </div>
   `;
 
+  // Reset selection tracking BEFORE rendering so defaults are clean
+  revisionSelectedIds = new Set();
+  revisionWordData = {};
   renderRevisionWordList(words);
-    // Reset selection tracking (BEFORE rendering so counts are correct)
-    revisionSelectedIds = new Set();
-    revisionWordData = {};
-    updateSelectionCount(0);
-  }
+  updateSelectionCount(0);
+}
 
 function renderRevisionWordList(words) {
   const list = document.getElementById('revisionWordList');
@@ -250,13 +250,18 @@ function renderListItems(filtered, totalCount) {
 function onRevisionCheckChange(el, id) {
   if (el.checked) {
     revisionSelectedIds.add(id);
+    // Also populate word data from the checkbox's data attribute
+    try {
+      const wordData = JSON.parse(el.dataset.word);
+      if (wordData && wordData.id) revisionWordData[id] = wordData;
+    } catch (e) {}
   } else {
     revisionSelectedIds.delete(id);
   }
   updateSelectionCount(document.querySelectorAll('#revisionWordList label.selection-item').length);
-  }
+}
 
-  function updateSelectionCount(visibleCount) {
+function updateSelectionCount(visibleCount) {
   const totalSelected = revisionSelectedIds.size;
   const qtyInput = document.getElementById('questionCount');
   const maxEl = document.getElementById('maxCount');
@@ -291,6 +296,10 @@ function toggleSelectAll() {
     cb.checked = checked;
     if (checked) {
       revisionSelectedIds.add(cb.value);
+      try {
+        const wordData = JSON.parse(cb.dataset.word);
+        if (wordData && wordData.id) revisionWordData[cb.value] = wordData;
+      } catch (e) {}
     } else {
       revisionSelectedIds.delete(cb.value);
     }
