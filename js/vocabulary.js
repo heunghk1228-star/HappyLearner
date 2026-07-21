@@ -718,6 +718,19 @@ async function getWordsThisMonth() {
   return count || 0;
 }
 
+async function getWordsReviewedThisMonth() {
+  if (!currentUser) return 0;
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const { count, error } = await supabaseClient
+    .from('vocabulary')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', currentUser.id)
+    .gte('last_reviewed', startOfMonth);
+  if (error) { console.warn('getWordsReviewedThisMonth error:', error); return 0; }
+  return count || 0;
+}
+
 // ============================================================
 // AI: Batch Chinese meaning generation
 // ============================================================

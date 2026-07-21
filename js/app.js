@@ -247,14 +247,15 @@ async function loadStreakDisplay() {
   const checkedIn = await getTodayCheckIn();
   const streak = await getCheckInStreak();
   const wordsThisMonth = await getWordsThisMonth();
+  const wordsReviewed = await getWordsReviewedThisMonth();
   el.classList.remove('hidden');
   el.innerHTML = `
     <div class="growth-bar">
       <div class="growth-primary">
-        ${t('english.wordsThisMonth').replace('{n}', wordsThisMonth)}
+        ${t('english.wordsThisMonth').replace('{n}', wordsThisMonth).replace('{r}', wordsReviewed)}
       </div>
       <div class="growth-secondary">
-        🔥 ${t('english.dayStreak')}: ${streak} ${checkedIn ? '· ✅ ' + t('english.checkInToday') : '· 📝 ' + t('english.checkIn')}
+        🔥 ${t('english.dayStreak')}: ${streak}天 · 📝 ${checkedIn ? '✅ ' + t('english.checkInToday') : t('english.checkIn')}
       </div>
     </div>
   `;
