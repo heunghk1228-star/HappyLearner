@@ -13,11 +13,17 @@ const I18N = {
       humanities: '人文'
     },
     about: {
-      title: '關於我們',
-      desc1: '因市面學習工具流於表面，所以親自為女兒建立學習工具。當中結合了多個學習理論及自己的學習經驗及教學經驗。',
-      desc2: '以串生字為例，我們有 Flash Cards，運用了記憶曲線原理。我們深知學習一個詞彙遠不止於串字——我們亦強調如何運用詞語。因此除了串字，我們還有填空練習。',
-      desc3: '你可以輸入自己的詞彙庫，我們的網站會追蹤你對每個詞彙的熟悉程度。我們還有打卡系統，鼓勵（監察）學生每天溫習所學。',
-      features: '平台特色'
+      title: '聰明複習，輕鬆累積：專為小學生設計的學習成長平台',
+      subtitle: 'Happy Learner 的誕生，源於一位父親對小一女兒的愛與堅持。\n\n我們結合科學記憶曲線與教育實踐，打造真正懂得孩子學習規律的聰明工具，讓背單字變成一場有成就感的探索。',
+      philosophy_title: '為什麼選擇 Happy Learner？',
+      philosophy: '面對坊間死板、流於表面的學習工具，我們深深明白：死記硬背無法讓孩子真正掌握語言。背熟字母只是第一步，懂得如何在句型中運用，才是語言學習的本質。\n\n我們將艾賓浩斯記憶曲線（Forgetting Curve）與情境填空練習相結合，並融入「客製化字詞庫」與「每日打卡機制」，幫助孩子在黃金時間內複習、深化理解，一步步建立自信與自主學習的良好習慣。',
+      features: '平台三大核心特色',
+      feature1_title: '科學記憶曲線',
+      feature1_desc: '結合記憶曲線原理，自動為孩子安排最佳複習時機。配合 Flash Cards 圖像卡片與語境填空，不只「會串字」，更懂得「會運用」。',
+      feature2_title: '專屬自訂詞庫',
+      feature2_desc: '打破固定教材限制！家長或學生可自由輸入學校默書、測驗的字詞，系統將自動追蹤每個詞彙的熟悉度，精準補強弱項。',
+      feature3_title: '學習打卡與習慣養成',
+      feature3_desc: '透過趣味打卡與進度追蹤，用鼓勵代替壓力。讓孩子在每日微小的進步中獲得成就感，自然而然養成自主溫習的好習慣。'
     },
     english: {
       title: '英文',
@@ -208,11 +214,17 @@ const I18N = {
       humanities: '人文'
     },
     about: {
-      title: '关于我们',
-      desc1: '因市面学习工具流于表面，所以亲自为女儿建立学习工具。当中结合了多个学习理论及自己的学习经验及教学经验。',
-      desc2: '以串生字为例，我们有 Flash Cards，运用了记忆曲线原理。我们深知学习一个词汇远不止于串字——我们亦强调如何运用词语。因此除了串字，我们还有填空练习。',
-      desc3: '你可以输入自己的词汇库，我们的网站会追踪你对每个词汇的熟悉程度。我们还有打卡系统，鼓励（监察）学生每天温习所学。',
-      features: '平台特色'
+      title: '聪明复习，轻松累积：专为小学生设计的学习成长平台',
+      subtitle: 'Happy Learner 的诞生，源于一位父亲对小一女儿的爱与坚持。\n\n我们结合科学记忆曲线与教育实践，打造真正懂得孩子学习规律的聪明工具，让背单词变成一场有成就感的探索。',
+      philosophy_title: '为什么选择 Happy Learner？',
+      philosophy: '面对坊间死板、流于表面的学习工具，我们深深明白：死记硬背无法让孩子真正掌握语言。背熟字母只是第一步，懂得如何在句型中运用，才是语言学习的本质。\n\n我们将艾宾浩斯记忆曲线（Forgetting Curve）与情境填空练习相结合，并融入「客制化字词库」与「每日打卡机制」，帮助孩子在黄金时间内复习、深化理解，一步步建立自信与自主学习的良好习惯。',
+      features: '平台三大核心特色',
+      feature1_title: '科学记忆曲线',
+      feature1_desc: '结合记忆曲线原理，自动为孩子安排最佳复习时机。配合 Flash Cards 图像卡片与语境填空，不只「会串字」，更懂得「会运用」。',
+      feature2_title: '专属自订词库',
+      feature2_desc: '打破固定教材限制！家长或学生可自由输入学校默书、测验的字词，系统将自动追踪每个词汇的熟悉度，精准补强弱项。',
+      feature3_title: '学习打卡与习惯养成',
+      feature3_desc: '透过趣味打卡与进度追踪，用鼓励代替压力。让孩子在每日微小的进步中获得成就感，自然而然养成自主温习的好习惯。'
     },
     english: {
       title: '英文',
@@ -391,11 +403,17 @@ const I18N = {
       humanities: 'Humanities'
     },
     about: {
-      title: 'About Us',
-      desc1: 'Finding most learning tools superficial, I built this toolkit for my daughter. It combines multiple learning theories with my own study and teaching experience.',
-      desc2: 'Take vocabulary building as an example — we have Flash Cards employing the memory curve principle. We know learning a word is far more than just spelling it; we also emphasize how to use words. So beyond spelling, we have fill-in-the-blank exercises.',
-      desc3: 'You can input your own vocabulary database, and our website tracks your familiarity with each word. We also have a check-in system to encourage (monitor) students to review what they\'ve learned daily.',
-      features: 'Platform Features'
+      title: 'Smart Revision, Easy Growth: A Learning Platform Designed for Elementary Students',
+      subtitle: 'Happy Learner was born from a parent\'s love and dedication for their first-grade daughter.\n\nWe combine the science of memory curves with educational practice to create smart tools that truly understand how children learn — turning vocabulary building into a rewarding journey of discovery.',
+      philosophy_title: 'Why Choose Happy Learner?',
+      philosophy: 'Facing rigid, superficial learning tools on the market, we deeply understand: rote memorization alone cannot help children truly master a language. Knowing letters is just the first step — knowing how to use words in sentences is the essence of language learning.\n\nWe combine the Ebbinghaus Forgetting Curve with contextual fill-in-the-blank exercises, integrated with a personalized vocabulary bank and a daily check-in system. This helps children review at optimal times, deepen their understanding, and gradually build confidence and self-directed learning habits.',
+      features: 'Three Core Features',
+      feature1_title: 'Scientific Memory Curve',
+      feature1_desc: 'Leveraging the memory curve principle, the system automatically schedules the best review times. With Flash Cards and contextual exercises, children don\'t just spell words — they learn to use them.',
+      feature2_title: 'Personalized Vocabulary Bank',
+      feature2_desc: 'Break free from fixed textbooks! Parents or students can freely input words from school dictation or tests. The system automatically tracks familiarity with each word and precisely targets weak areas.',
+      feature3_title: 'Daily Check-in & Habit Building',
+      feature3_desc: 'Through fun check-ins and progress tracking, encourage instead of pressure. Let children gain a sense of achievement from small daily improvements, naturally developing good self-study habits.'
     },
     english: {
       title: 'English',

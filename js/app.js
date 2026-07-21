@@ -153,31 +153,36 @@ function navigateTo(page, pushHash) {
 function renderAboutPage(container) {
   container.innerHTML = `
     <div class="about-page">
-      <div class="about-hero">
-        <h1>${t('about.title')}</h1>
+      <!-- Hero Section -->
+      <div class="hero-section">
+        <h1 class="hero-title">${t('about.title')}</h1>
+        <p class="hero-subtitle">${t('about.subtitle')}</p>
       </div>
-      <div class="about-content">
-        <p>${t('about.desc1')}</p>
-        <p>${t('about.desc2')}</p>
-        <p>${t('about.desc3')}</p>
+      
+      <!-- Philosophy Section -->
+      <div class="philosophy-section">
+        <h2>${t('about.philosophy_title')}</h2>
+        <p>${t('about.philosophy')}</p>
       </div>
+      
+      <!-- Features Section -->
       <div class="features-section">
         <h3>${t('about.features')}</h3>
         <div class="features-grid">
           <div class="feature-card">
-            <div class="feature-icon">🧠</div>
-            <h4>Memory Curve</h4>
-            <p>${t('about.desc2')}</p>
+            <div class="feature-icon">📈</div>
+            <h4>${t('about.feature1_title')}</h4>
+            <p>${t('about.feature1_desc')}</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">📚</div>
-            <h4>${t('about.title')}</h4>
-            <p>${t('about.desc3')}</p>
+            <h4>${t('about.feature2_title')}</h4>
+            <p>${t('about.feature2_desc')}</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon">✅</div>
-            <h4>${t('english.checkin')}</h4>
-            <p>${t('about.desc3')}</p>
+            <div class="feature-icon">🎯</div>
+            <h4>${t('about.feature3_title')}</h4>
+            <p>${t('about.feature3_desc')}</p>
           </div>
         </div>
       </div>
