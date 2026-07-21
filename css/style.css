@@ -2606,3 +2606,121 @@ body {
   color: var(--text-light);
   margin-top: 0.25rem;
 }
+
+/* ============================================================
+   Science Module Selection
+   ============================================================ */
+
+.science-modules-title {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.science-modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.science-module-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow);
+}
+
+.science-module-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.science-module-card .module-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.science-module-card h4 {
+  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+}
+
+.science-module-card p {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  line-height: 1.5;
+}
+
+.science-back-bar {
+  margin-bottom: 1rem;
+}
+
+/* ============================================================
+   Water Cycle Styles
+   ============================================================ */
+
+.wc-stages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 0;
+}
+
+.wc-stage {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+
+.wc-stage-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.wc-stage h4 {
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+}
+
+.wc-stage p {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  line-height: 1.5;
+}
+
+/* ============================================================
+   Circuit Simulation Styles
+   ============================================================ */
+
+.circuit-controls {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.circuit-controls .btn-primary {
+  font-size: 1rem;
+  padding: 0.6rem 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.circuit-status {
+  font-size: 0.95rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .science-modules-grid {
+    grid-template-columns: 1fr;
+  }
+  .wc-stages {
+    grid-template-columns: 1fr 1fr;
+  }
+}
