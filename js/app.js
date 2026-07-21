@@ -61,16 +61,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Also handle browser back/forward via popstate (fires before hashchange)
     window.addEventListener('popstate', () => {
-      const page = getCurrentPageFromHash();
-      if (page) {
-        lastKnownHash = window.location.hash;
-        navigateTo(page, false);
+      const newHash = window.location.hash;
+      if (newHash !== lastKnownHash) {
+        const page = getCurrentPageFromHash();
+        if (page) {
+          lastKnownHash = newHash;
+          navigateTo(page, false);
+        }
       }
     });
   
   // Navigate to initial page from hash or default
   const initialPage = getCurrentPageFromHash() || 'about';
   navigateTo(initialPage, false);
+
+  // Prevent re-navigation when tab is restored from BFCache (tab switch)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      // Sync lastKnownHash to current hash to prevent stale hashchange/popstate
+      lastKnownHash = window.location.hash;
+    }
+  });
   
   // Auth callback
   window.onAuthChange = (user) => {
