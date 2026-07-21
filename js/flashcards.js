@@ -428,6 +428,7 @@ async function openFlashcards() {
     history.pushState({}, '', '#english/flashcards');
     lastKnownHash = '#english/flashcards';
   }
+  isInSubPage = true;
 
   showLoading();
   const words = await fetchVocabulary();

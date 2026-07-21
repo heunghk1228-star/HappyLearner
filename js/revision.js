@@ -33,6 +33,7 @@ async function showRevisionPage() {
     history.pushState({}, '', '#english/revision');
     lastKnownHash = '#english/revision';
   }
+  isInSubPage = true;
 
   const page = document.getElementById('pageContent');
   page.innerHTML = `

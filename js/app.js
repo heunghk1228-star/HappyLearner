@@ -148,10 +148,12 @@ function getCurrentSubPageFromHash() {
 
 let navCurrentPage = null; // Track current navigation page to prevent re-navigation
 let lastKnownHash = window.location.hash || ''; // Track full hash for back-from-sub-page detection
+let isInSubPage = false; // True when viewing a sub-page (vocab, flashcards, revision)
 
 function navigateTo(page, pushHash) {
   // Guard: prevent re-navigation to the same page (spurious hashchange on tab switch)
-  if (navCurrentPage === page && !pushHash) return;
+  // BUT allow re-navigation when coming from a sub-page (vocab/flashcards/revision)
+  if (navCurrentPage === page && !pushHash && !isInSubPage) return;
   
   // Close mobile menu
   const nav = document.getElementById('mainNav');
@@ -163,8 +165,9 @@ function navigateTo(page, pushHash) {
         return; // hashchange will trigger navigateTo again with pushHash=false
   }
   
-  // Update tracking
+  // Update tracking — when navigating to a top-level page, exit sub-page mode
   navCurrentPage = page;
+  isInSubPage = false;
   
   // Update active nav link
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
@@ -325,6 +328,7 @@ async function openVocabularyBook() {
     history.pushState({}, '', '#english/vocab');
     lastKnownHash = '#english/vocab';
   }
+  isInSubPage = true;
   showLoading();
   const words = await fetchVocabulary();
   

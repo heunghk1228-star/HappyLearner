@@ -1,0 +1,423 @@
+// ============================================================
+// Main App — Routing, Navigation, Page Rendering
+// ============================================================
+
+// ============================================================
+// Initialization
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSupabase();
+  
+  // Set up navigation
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const page = link.dataset.page;
+      window.__hermes_navTriggered = true;
+      navigateTo(page, true);
+    });
+  });
+  
+  // Set up auth modal
+  document.getElementById('loginBtn')?.addEventListener('click', showAuthModal);
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    await logout();
+  });
+  
+  document.getElementById('authModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) hideAuthModal();
+  });
+  
+  // Load saved language
+  const savedLang = localStorage.getItem('lang') || 'zh-TW';
+  setLanguage(savedLang);
+
+  // Hash-based routing
+  // Track whether the user (not the browser) is actively navigating
+  window.addEventListener('hashchange', () => {
+    // If the tab was hidden and just became visible, ignore spurious hashchange
+    // (browsers sometimes fire hashchange on tab switch / BFCache restore)
+    if (document.hidden) return;
+    if (window.__hermes_tabJustVisible) {
+      window.__hermes_tabJustVisible = false;
+      return;
+    }
+
+    const page = getCurrentPageFromHash();
+    const newHash = window.location.hash;
+    if (!page) return;
+
+    if (window.__hermes_navTriggered) {
+      // User clicked a nav link or back button → always navigate
+      window.__hermes_navTriggered = false;
+      lastKnownHash = newHash;
+      navigateTo(page, false);
+    } else if (newHash !== lastKnownHash) {
+      // Hash actually changed — only navigate if not going deeper into a sub-page
+      // Sub-page nav (vocab, flashcards, revision) is handled by onclick
+      const newLen = newHash.replace('#', '').split('/').length;
+      const oldLen = lastKnownHash.replace('#', '').split('/').length;
+      lastKnownHash = newHash;
+      if (newLen <= oldLen) {
+        navigateTo(page, false);
+      }
+    }
+  });
+
+  // Also handle browser back/forward via popstate (fires before hashchange)
+  window.addEventListener('popstate', () => {
+    const newHash = window.location.hash;
+    if (newHash !== lastKnownHash) {
+      const page = getCurrentPageFromHash();
+      if (page) {
+        lastKnownHash = newHash;
+        // Skip if tab was just made visible (spurious popstate from BFCache restore)
+        if (!window.__hermes_tabJustVisible) {
+          navigateTo(page, false);
+        }
+      }
+    }
+  });
+  
+  // Navigate to initial page from hash or default
+  const initialPage = getCurrentPageFromHash() || 'about';
+  navigateTo(initialPage, false);
+
+  // Prevent re-navigation when tab is restored from BFCache (tab switch)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      // Set flag so the next hashchange/popstate knows this is a tab-restore, not user navigation
+      window.__hermes_tabJustVisible = true;
+      // Sync lastKnownHash to current hash to prevent stale hashchange/popstate
+      lastKnownHash = window.location.hash;
+      // Clear the flag after a short delay (spurious events arrive within ms of becoming visible)
+      setTimeout(() => { window.__hermes_tabJustVisible = false; }, 500);
+    }
+  });
+  
+  // Auth callback
+  window.onAuthChange = (user) => {
+    if (user) {
+      hideAuthModal();
+      // Re-render current page content without changing hash
+      const page = getCurrentPageFromHash();
+      if (page) {
+        const content = document.getElementById('pageContent');
+        if (content) {
+          // Re-render the page to reflect logged-in state
+          switch (page) {
+            case 'english':
+              renderEnglishPage(content);
+              setTimeout(() => {
+                const sub = getCurrentSubPageFromHash();
+                if (sub === 'vocab') openVocabularyBook();
+                else if (sub === 'flashcards') openFlashcards();
+                else if (sub === 'revision') showRevisionPage();
+              }, 10);
+              break;
+            case 'about': renderAboutPage(content); break;
+            case 'math': renderMathPage(content); break;
+            case 'science': renderSciencePage(content); break;
+            default:
+              if (typeof renderComingSoonPage === 'function')
+                renderComingSoonPage(content, page);
+          }
+        }
+      }
+    }
+  };
+});
+
+function getCurrentPageFromHash() {
+  const hash = window.location.hash.replace('#', '');
+  if (!hash) return null;
+  // Handle sub-pages: english/vocab -> english
+  return hash.split('/')[0];
+}
+
+function getCurrentSubPageFromHash() {
+  const hash = window.location.hash.replace('#', '');
+  const parts = hash.split('/');
+  return parts.length > 1 ? parts[1] : null;
+}
+
+// ============================================================
+// Navigation
+// ============================================================
+
+let navCurrentPage = null; // Track current navigation page to prevent re-navigation
+let lastKnownHash = window.location.hash || ''; // Track full hash for back-from-sub-page detection
+let isInSubPage = false; // True when viewing a sub-page (vocab, flashcards, revision)
+
+function navigateTo(page, pushHash) {
+  // Guard: prevent re-navigation to the same page (spurious hashchange on tab switch)
+  // BUT allow re-navigation when coming from a sub-page (vocab/flashcards/revision)
+  if (navCurrentPage === page && !pushHash && !isInSubPage) return;
+  
+  // Close mobile menu
+  const nav = document.getElementById('mainNav');
+  if (nav) nav.classList.remove('open');
+  
+  if (pushHash) {
+        window.location.hash = page;
+        lastKnownHash = '#' + page;
+        return; // hashchange will trigger navigateTo again with pushHash=false
+  }
+  
+  // Update tracking — when navigating to a top-level page, exit sub-page mode
+  navCurrentPage = page;
+  isInSubPage = false;
+  
+  // Update active nav link
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  const navLink = document.querySelector(`.nav-link[data-page="${page}"]`);
+  if (navLink) navLink.classList.add('active');
+  
+  // Render page
+  const content = document.getElementById('pageContent');
+  switch (page) {
+    case 'about': renderAboutPage(content); break;
+    case 'chinese': renderComingSoonPage(content, 'chinese'); break;
+    case 'english':
+      renderEnglishPage(content);
+      // Handle sub-pages after English page renders
+      setTimeout(() => {
+        const sub = getCurrentSubPageFromHash();
+        if (sub === 'vocab') openVocabularyBook();
+        else if (sub === 'flashcards') openFlashcards();
+        else if (sub === 'revision') showRevisionPage();
+      }, 10);
+      break;
+    case 'math': renderMathPage(content); break;
+    case 'science': renderSciencePage(content); break;
+    case 'humanities': renderComingSoonPage(content, 'humanities'); break;
+    default: renderAboutPage(content);
+  }
+  
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// Page Renderers
+// ============================================================
+
+function renderAboutPage(container) {
+  container.innerHTML = `
+    <div class="about-page">
+      <!-- Hero Section -->
+      <div class="hero-section">
+        <h1 class="hero-title">${t('about.title')}</h1>
+        <p class="hero-subtitle">${t('about.subtitle')}</p>
+      </div>
+      
+      <!-- Philosophy Section -->
+      <div class="philosophy-section">
+        <h2>${t('about.philosophy_title')}</h2>
+        <p>${t('about.philosophy')}</p>
+      </div>
+      
+      <!-- Features Section -->
+      <div class="features-section">
+        <h3>${t('about.features')}</h3>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">📈</div>
+            <h4>${t('about.feature1_title')}</h4>
+            <p>${t('about.feature1_desc')}</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📚</div>
+            <h4>${t('about.feature2_title')}</h4>
+            <p>${t('about.feature2_desc')}</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <h4>${t('about.feature3_title')}</h4>
+            <p>${t('about.feature3_desc')}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEnglishPage(container) {
+  if (!currentUser) {
+    container.innerHTML = `
+      <div class="english-page">
+        <div class="page-header">
+          <h2>${t('english.title')}</h2>
+        </div>
+        <div class="login-prompt">
+          <p>🔒 ${t('english.loginRequired')}</p>
+          <button class="btn btn-primary" onclick="showAuthModal()">${t('english.login')}</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = `
+    <div class="english-page">
+      <div class="page-header">
+        <h2>${t('english.title')}</h2>
+      </div>
+      
+      <!-- Dynamic Content Area (includes tool cards + streak on main page) -->
+      <div id="englishContent">
+        <div id="streakDisplay" class="streak-bar"></div>
+        <div class="tool-cards">
+          <div class="tool-card" onclick="openVocabularyBook()">
+            <div class="tool-icon">📖</div>
+            <h3>${t('english.myVocab')}</h3>
+            <p>${t('english.myVocabDesc')}</p>
+          </div>
+          <div class="tool-card" onclick="openFlashcards()">
+            <div class="tool-icon">🃏</div>
+            <h3>${t('english.flashCards')}</h3>
+            <p>${t('english.flashCardsDesc')}</p>
+          </div>
+          <div class="tool-card" onclick="showRevisionPage()">
+            <div class="tool-icon">📝</div>
+            <h3>${t('english.revision')}</h3>
+            <p>${t('english.revisionDesc')}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Load streak display
+  loadStreakDisplay();
+}
+
+async function loadStreakDisplay() {
+  const el = document.getElementById('streakDisplay');
+  if (!el) return;
+  if (!currentUser) { el.classList.add('hidden'); return; }
+  const checkedIn = await getTodayCheckIn();
+  const streak = await getCheckInStreak();
+  const wordsLast7 = await getWordsLast7Days();
+  const wordsReviewed = getReviewCountLast7Days();
+  el.classList.remove('hidden');
+  el.innerHTML = `
+    <div class="growth-bar">
+      <div class="growth-primary">
+        ${t('english.wordsLast7Days').replace('{n}', wordsLast7).replace('{r}', wordsReviewed)}
+      </div>
+      <div class="growth-secondary">
+        🔥 ${t('english.dayStreak')}: ${streak}天 · ${checkedIn ? '✅ ' + t('english.checkInToday') : '📝 ' + t('english.checkIn')}
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// Coming Soon
+// ============================================================
+
+function renderComingSoonPage(container, subject) {
+  container.innerHTML = `
+    <div class="coming-soon-page">
+      <div class="coming-soon-icon">🚧</div>
+      <h2>${t(`${subject}.title`)}</h2>
+      <p>${t(`${subject}.comingSoon`)}</p>
+    </div>
+  `;
+}
+// ============================================================
+// Utilities
+// ============================================================
+
+function showLoading() {
+  let loader = document.getElementById('globalLoader');
+  if (!loader) {
+    loader = document.createElement('div');
+    loader.id = 'globalLoader';
+    loader.className = 'global-loader';
+    document.body.appendChild(loader);
+  }
+  loader.classList.remove('hidden');
+}
+
+function hideLoading() {
+  const loader = document.getElementById('globalLoader');
+  if (loader) loader.classList.add('hidden');
+}
+
+function showToast(message) {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), 3000);
+}
+
+function toggleMobileMenu() {
+  const nav = document.getElementById('mainNav');
+  if (nav) nav.classList.toggle('open');
+}
+
+// ============================================================
+// Dropdown Toggles
+// ============================================================
+
+function toggleLangDropdown() {
+  document.getElementById('langDropdown').classList.toggle('hidden');
+  document.getElementById('userDropdown').classList.add('hidden');
+}
+
+function toggleUserDropdown() {
+  document.getElementById('userDropdown').classList.toggle('hidden');
+  document.getElementById('langDropdown').classList.add('hidden');
+}
+
+async function handleLogout() {
+  document.getElementById('userDropdown').classList.add('hidden');
+  await logout();
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.lang-selector-simple')) {
+    document.getElementById('langDropdown')?.classList.add('hidden');
+  }
+  if (!e.target.closest('.user-info')) {
+    document.getElementById('userDropdown')?.classList.add('hidden');
+  }
+});
+// ============================================================
+// Language Selector (simplified)
+// ============================================================
+
+// Override lang-btn click handlers for the new simplified design
+document.addEventListener('DOMContentLoaded', () => {
+  // Re-init lang selector — use lang-opt buttons instead of old lang-btn
+  document.querySelectorAll('.lang-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lang = btn.dataset.lang;
+      document.querySelectorAll('.lang-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      setLanguage(lang);
+      document.getElementById('langBtnMain').textContent = btn.textContent + ' ▾';
+      document.getElementById('langDropdown').classList.add('hidden');
+      // Get current page from active nav link
+      const activeLink = document.querySelector('.nav-link.active');
+      const page = activeLink ? activeLink.dataset.page : 'about';
+      navigateTo(page, true);
+    });
+  });
+  // Restore saved language
+  const saved = localStorage.getItem('lang') || 'zh-TW';
+  const activeOpt = document.querySelector(`.lang-opt[data-lang="${saved}"]`);
+  if (activeOpt) {
+    activeOpt.classList.add('active');
+    document.getElementById('langBtnMain').textContent = activeOpt.textContent + ' ▾';
+  }
+});
