@@ -476,7 +476,9 @@ async function generateSentence(word, cachedSentence) {
 
   // Use cached sentence if available
   if (cachedSentence) {
-    const blanked = cachedSentence.replace(new RegExp(word, 'gi'), '________');
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('\\b' + escaped + '\\b', 'i');
+    const blanked = cachedSentence.replace(re, '________');
     display.innerHTML = `
       <div class="sentence-text">${blanked}</div>
     `;
@@ -488,7 +490,9 @@ async function generateSentence(word, cachedSentence) {
   try {
     const sentence = await callAISentence(word);
     if (sentence && display) {
-      const blanked = sentence.replace(new RegExp(word, 'gi'), '________');
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp('\\b' + escaped + '\\b', 'i');
+      const blanked = sentence.replace(re, '________');
       display.innerHTML = `
         <div class="sentence-text">${blanked}</div>
         <div class="sentence-source">✨ AI generated</div>
@@ -503,7 +507,7 @@ async function generateSentence(word, cachedSentence) {
 
   const fallback = `Please _____ the word "${word}" in this sentence.`;
   display.innerHTML = `
-    <div class="sentence-text">${fallback.replace(word, '________')}</div>
+    <div class="sentence-text">${fallback.replace('_____', '________')}</div>
     <div class="sentence-source">📝 Fallback</div>
   `;
   display.dataset.sentence = fallback;

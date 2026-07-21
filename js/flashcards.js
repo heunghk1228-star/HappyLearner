@@ -168,10 +168,8 @@ function renderMiniCard(word) {
           <div class="sound-row">
             <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordSlow('${word.word}')" title="🐢 ${t('english.slow')}">🐢</button>
             <button class="sound-btn-sm" onclick="event.stopPropagation(); speakWordFast('${word.word}')" title="🐇 ${t('english.fast')}">🐇</button>
-            <button class="sound-btn-sm sound-out-btn" onclick="event.stopPropagation(); soundOutWord('${word.word}', '${word.id}')" title="${t('english.soundOut')}">🔊 A-B-C</button>
           </div>
           <div class="grid-tier">${tierLabel}</div>
-          <div class="sound-out-display" id="soundOut-${word.id}"></div>
         </div>
         <div class="grid-card-back">
           <div class="grid-meaning">${word.chinese_meaning || '<span class="text-light">(未有翻譯)</span>'}</div>
@@ -360,61 +358,10 @@ function speakWordFast(word) {
   speakWord(word, getFastRate());
 }
 
-function soundOutWord(word, id) {
-  if (!('speechSynthesis' in window)) {
-    showToast('🔇 ' + (t('english.speechUnavailable') || 'Speech not available'));
-    return;
-  }
-  
-  // Cancel any ongoing speech
-  window.speechSynthesis.cancel();
-  
-  const display = document.getElementById('soundOut-' + id);
-  if (display) {
-    display.innerHTML = '<span class="sound-out-word">🔊 ' + word + '</span>';
-    display.classList.add('active');
-  }
-  
-  // Speak the word slowly with natural pronunciation for phonics
-  const utterance = new SpeechSynthesisUtterance(word);
-  utterance.lang = 'en-US';
-  utterance.rate = 0.35; // Very slow for clear phonics
-  utterance.pitch = 1.1;
-  utterance.volume = 1.0;
-  
-  const voice = pickBestVoice();
-  if (voice) utterance.voice = voice;
-  
-  if (display) {
-    utterance.onstart = () => {
-      display.querySelector('.sound-out-word')?.classList.add('speaking');
-    };
-    utterance.onend = () => {
-      display.querySelector('.sound-out-word')?.classList.remove('speaking');
-      // Auto-clear after 2s
-      setTimeout(() => {
-        display.classList.remove('active');
-        display.innerHTML = '';
-      }, 2000);
-    };
-  }
-  
-  utterance.onerror = (e) => {
-    if (e.error !== 'canceled' && e.error !== 'interrupted') {
-      console.warn('Sound-out speech error:', e.error);
-    }
-  };
-  
-  try {
-    window.speechSynthesis.speak(utterance);
-  } catch (e) {
-    console.warn('Sound-out speech failed:', e);
-    showToast('🔇 ' + (t('english.speechUnavailable') || 'Speech not available'));
-  }
-}
+// ============================================================
+// Open flash cards page
 
 function testSpeechVoice() {
-  // Speak at the fast speed setting so user can hear the effect
   speakWord('Hello. This is a test.', getFastRate());
 }
 
