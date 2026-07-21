@@ -2516,3 +2516,108 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   Science Page — Sun-Earth Visualization
+   ============================================================ */
+
+.science-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.science-subtitle {
+  color: var(--text-light);
+  font-size: 1rem;
+  margin-top: 0.25rem;
+}
+
+.science-canvas-wrapper {
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.science-canvas-wrapper canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.science-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.science-speed-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.science-speed-control input[type="range"] {
+  width: 120px;
+  cursor: pointer;
+}
+
+.science-speed-control #scienceSpeedLabel {
+  min-width: 30px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.science-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .science-info {
+    grid-template-columns: 1fr;
+  }
+}
+
+.science-info .info-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.science-info .info-card h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.science-info .info-card ul {
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.science-info .info-card li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+#seasonName {
+  color: #ff8800;
+  font-weight: 700;
+}
+
+#seasonDescription {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-top: 0.25rem;
+}

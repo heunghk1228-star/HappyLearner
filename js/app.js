@@ -149,7 +149,7 @@ function navigateTo(page, pushHash) {
       }, 10);
       break;
     case 'math': renderMathPage(content); break;
-    case 'science': renderComingSoonPage(content, 'science'); break;
+    case 'science': renderSciencePage(content); break;
     case 'humanities': renderComingSoonPage(content, 'humanities'); break;
     default: renderAboutPage(content);
   }

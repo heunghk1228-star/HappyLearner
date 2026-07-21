@@ -187,7 +187,28 @@ const I18N = {
     },
     science: {
       title: '科學',
-      comingSoon: '即將推出...'
+      subtitle: '🌍 太陽與地球 — 四季與日夜的奧秘',
+      pause: '暫停',
+      play: '播放',
+      speed: '速度',
+      season: '季節',
+      currentSeason: '目前季節',
+      howItWorks: '🌞 原理說明',
+      spring: '春天',
+      summer: '夏天',
+      autumn: '秋天',
+      winter: '冬天',
+      springDesc: '🌱 太陽直射點逐漸北移，北半球回暖，晝夜長短差距縮小',
+      summerDesc: '☀️ 太陽直射北回歸線，北半球日照最長、氣溫最高',
+      autumnDesc: '🍂 太陽直射點南移，北半球開始降溫，晝夜漸趨平衡',
+      winterDesc: '❄️ 太陽直射南回歸線，北半球日照最短、氣溫最低',
+      fact1: '太陽直徑約地球的109倍，但距離地球約1.5億公里',
+      fact2: '地球以23.5°傾角自轉，這傾角造就了四季變化',
+      fact3: '地球繞太陽公轉一圈約365.25天，即一年',
+      fact4: '地球自轉一圈約24小時，面向太陽的一面是白天，背向的一面是黑夜',
+      orbitAngle: '公轉角度',
+      day: '☀️ 晝',
+      night: '🌙 夜'
     },
     chinese: {
       title: '中文',
@@ -385,7 +406,7 @@ const I18N = {
       golPause: '⏸ 暂停',
       golClear: '🗑️ 清空',
       golRandom: '🎲 随机' },
-    science: { title: '科学', comingSoon: '即将推出...' },
+    science: { title: '科学', subtitle: '🌍 太阳与地球 — 四季与日夜的奥秘', pause: '暂停', play: '播放', speed: '速度', season: '季节', currentSeason: '目前季节', howItWorks: '🌞 原理说明', spring: '春天', summer: '夏天', autumn: '秋天', winter: '冬天', springDesc: '🌱 太阳直射点逐渐北移，北半球回暖，昼夜长短差距缩小', summerDesc: '☀️ 太阳直射北回归线，北半球日照最长、气温最高', autumnDesc: '🍂 太阳直射点南移，北半球开始降温，昼夜渐趋平衡', winterDesc: '❄️ 太阳直射南回归线，北半球日照最短、气温最低', fact1: '太阳直径约地球的109倍，但距离地球约1.5亿公里', fact2: '地球以23.5°倾角自转，这倾角造就了四季变化', fact3: '地球绕太阳公转一圈约365.25天，即一年', fact4: '地球自转一圈约24小时，面向太阳的一面是白天，背向的一面是黑夜', orbitAngle: '公转角度', day: '☀️ 昼', night: '🌙 夜' },
     chinese: { title: '中文', comingSoon: '即将推出...' },
     humanities: { title: '人文', comingSoon: '即将推出...' },
     common: {
@@ -575,7 +596,7 @@ const I18N = {
       golPause: '⏸ Pause',
       golClear: '🗑️ Clear',
       golRandom: '🎲 Random' },
-    science: { title: 'Science', comingSoon: 'Coming soon...' },
+    science: { title: 'Science', subtitle: '🌍 Sun & Earth — Seasons & Day/Night', pause: 'Pause', play: 'Play', speed: 'Speed', season: 'Season', currentSeason: 'Current Season', howItWorks: '🌞 How It Works', spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter', springDesc: '🌱 Sun moves north, Northern Hemisphere warms up, days and nights become equal', summerDesc: '☀️ Sun shines directly on Tropic of Cancer, longest days and hottest weather', autumnDesc: '🍂 Sun moves south, Northern Hemisphere cools, days and nights balance', winterDesc: '❄️ Sun shines directly on Tropic of Capricorn, shortest days and coldest weather', fact1: 'The Sun is 109x wider than Earth, but 150 million km away', fact2: 'Earth\'s 23.5° tilt creates the seasons as it orbits the Sun', fact3: 'One orbit around the Sun takes 365.25 days — one year', fact4: 'Earth rotates once every 24 hours — the side facing the Sun is day, the other is night', orbitAngle: 'Orbit Angle', day: '☀️ Day', night: '🌙 Night' },
     chinese: { title: '中文', comingSoon: 'Coming soon...' },
     humanities: { title: 'Humanities', comingSoon: 'Coming soon...' },
     common: {
