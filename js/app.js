@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const page = link.dataset.page;
-      navTriggered = true;
+      window.__hermes_navTriggered = true;
       navigateTo(page, true);
     });
   });
@@ -32,44 +32,53 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load saved language
   const savedLang = localStorage.getItem('lang') || 'zh-TW';
   setLanguage(savedLang);
-  
-  let navCurrentPage = null; // Track current navigation page
-  let navTriggered = false; // Set when nav link is clicked (allows re-navigation to parent page)
 
   // Hash-based routing
-    window.addEventListener('hashchange', () => {
-      const page = getCurrentPageFromHash();
-      const newHash = window.location.hash;
-      if (page) {
-        if (navTriggered) {
-          // User clicked a nav link or back button → always navigate
-          navTriggered = false;
-          lastKnownHash = newHash;
-          navigateTo(page, false);
-        } else if (newHash !== lastKnownHash) {
-          // Hash actually changed — only navigate if not going longer (sub-page)
-          // Sub-page nav (vocab, flashcards, revision) is handled by onclick
-          const newLen = newHash.replace('#', '').split('/').length;
-          const oldLen = lastKnownHash.replace('#', '').split('/').length;
-          lastKnownHash = newHash;
-          if (newLen <= oldLen) {
-            navigateTo(page, false);
-          }
-        }
-      }
-    });
+  // Track whether the user (not the browser) is actively navigating
+  window.addEventListener('hashchange', () => {
+    // If the tab was hidden and just became visible, ignore spurious hashchange
+    // (browsers sometimes fire hashchange on tab switch / BFCache restore)
+    if (document.hidden) return;
+    if (window.__hermes_tabJustVisible) {
+      window.__hermes_tabJustVisible = false;
+      return;
+    }
 
-    // Also handle browser back/forward via popstate (fires before hashchange)
-    window.addEventListener('popstate', () => {
-      const newHash = window.location.hash;
-      if (newHash !== lastKnownHash) {
-        const page = getCurrentPageFromHash();
-        if (page) {
-          lastKnownHash = newHash;
+    const page = getCurrentPageFromHash();
+    const newHash = window.location.hash;
+    if (!page) return;
+
+    if (window.__hermes_navTriggered) {
+      // User clicked a nav link or back button → always navigate
+      window.__hermes_navTriggered = false;
+      lastKnownHash = newHash;
+      navigateTo(page, false);
+    } else if (newHash !== lastKnownHash) {
+      // Hash actually changed — only navigate if not going deeper into a sub-page
+      // Sub-page nav (vocab, flashcards, revision) is handled by onclick
+      const newLen = newHash.replace('#', '').split('/').length;
+      const oldLen = lastKnownHash.replace('#', '').split('/').length;
+      lastKnownHash = newHash;
+      if (newLen <= oldLen) {
+        navigateTo(page, false);
+      }
+    }
+  });
+
+  // Also handle browser back/forward via popstate (fires before hashchange)
+  window.addEventListener('popstate', () => {
+    const newHash = window.location.hash;
+    if (newHash !== lastKnownHash) {
+      const page = getCurrentPageFromHash();
+      if (page) {
+        lastKnownHash = newHash;
+        // Skip if tab was just made visible (spurious popstate from BFCache restore)
+        if (!window.__hermes_tabJustVisible) {
           navigateTo(page, false);
         }
       }
-    });
+    }
+  });
   
   // Navigate to initial page from hash or default
   const initialPage = getCurrentPageFromHash() || 'about';
@@ -78,8 +87,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Prevent re-navigation when tab is restored from BFCache (tab switch)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
+      // Set flag so the next hashchange/popstate knows this is a tab-restore, not user navigation
+      window.__hermes_tabJustVisible = true;
       // Sync lastKnownHash to current hash to prevent stale hashchange/popstate
       lastKnownHash = window.location.hash;
+      // Clear the flag after a short delay (spurious events arrive within ms of becoming visible)
+      setTimeout(() => { window.__hermes_tabJustVisible = false; }, 500);
     }
   });
   
@@ -134,10 +147,12 @@ function getCurrentSubPageFromHash() {
 // ============================================================
 
 let navCurrentPage = null; // Track current navigation page to prevent re-navigation
-let navTriggered = false; // Set when nav link is clicked (allows re-navigation to parent page)
 let lastKnownHash = window.location.hash || ''; // Track full hash for back-from-sub-page detection
 
 function navigateTo(page, pushHash) {
+  // Guard: prevent re-navigation to the same page (spurious hashchange on tab switch)
+  if (navCurrentPage === page && !pushHash) return;
+  
   // Close mobile menu
   const nav = document.getElementById('mainNav');
   if (nav) nav.classList.remove('open');
@@ -300,7 +315,7 @@ async function loadStreakDisplay() {
 // ============================================================
 
 function showEnglishPage() {
-  navTriggered = true;
+  window.__hermes_navTriggered = true;
   navigateTo('english', true);
 }
 
@@ -1482,11 +1497,6 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add('visible');
   setTimeout(() => toast.classList.remove('visible'), 3000);
-}
-
-function showEnglishPage() {
-  navTriggered = true;
-  navigateTo('english', true);
 }
 
 function toggleMobileMenu() {
