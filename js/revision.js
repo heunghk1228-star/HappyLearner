@@ -634,7 +634,7 @@ async function callAISentence(word) {
 // Answer Checking
 // ============================================================
 
-function submitAnswer() {
+async function submitAnswer() {
   const input = document.getElementById('answerInput');
   const resultArea = document.getElementById('testResult');
   if (!input || !resultArea) return;
@@ -685,7 +685,13 @@ function submitAnswer() {
     }
 
     // Regenerate fill-blank sentence after correct answer
-    if (q.type === 'fillblank' && q.word.fillblank_sentence) {
+    if (q.type === 'fillblank') {
+      // Clear cached sentence so a new one is generated
+      await supabaseClient
+        .from('vocabulary')
+        .update({ fillblank_sentence: null })
+        .eq('id', q.word.id);
+      q.word.fillblank_sentence = null;
       precacheFillBlankSentence(q.word);
     }
   } else {
