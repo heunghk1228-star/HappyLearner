@@ -689,14 +689,18 @@ async function getCheckInStreak() {
   
   let streak = 0;
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayStr = today.getFullYear() + '-' + 
+    String(today.getMonth() + 1).padStart(2, '0') + '-' +
+    String(today.getDate()).padStart(2, '0');
   
   for (let i = 0; i < data.length; i++) {
-    const checkDate = new Date(data[i].check_in_date + 'T00:00:00');
     const expected = new Date(today);
     expected.setDate(expected.getDate() - i);
+    const expectedStr = expected.getFullYear() + '-' + 
+      String(expected.getMonth() + 1).padStart(2, '0') + '-' +
+      String(expected.getDate()).padStart(2, '0');
     
-    if (checkDate.getTime() === expected.getTime()) {
+    if (data[i].check_in_date === expectedStr) {
       streak++;
     } else {
       break;
@@ -705,29 +709,29 @@ async function getCheckInStreak() {
   return streak;
 }
 
-async function getWordsThisMonth() {
+async function getWordsLast7Days() {
   if (!currentUser) return 0;
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { count, error } = await supabaseClient
     .from('vocabulary')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', currentUser.id)
-    .gte('created_at', startOfMonth);
-  if (error) { console.warn('getWordsThisMonth error:', error); return 0; }
+    .gte('created_at', startDate);
+  if (error) { console.warn('getWordsLast7Days error:', error); return 0; }
   return count || 0;
 }
 
-async function getWordsReviewedThisMonth() {
+async function getWordsReviewedLast7Days() {
   if (!currentUser) return 0;
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const { count, error } = await supabaseClient
     .from('vocabulary')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', currentUser.id)
-    .gte('last_reviewed', startOfMonth);
-  if (error) { console.warn('getWordsReviewedThisMonth error:', error); return 0; }
+    .gte('last_reviewed', startDate);
+  if (error) { console.warn('getWordsReviewedLast7Days error:', error); return 0; }
   return count || 0;
 }
 

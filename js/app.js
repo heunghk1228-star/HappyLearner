@@ -257,16 +257,16 @@ async function loadStreakDisplay() {
   if (!currentUser) { el.classList.add('hidden'); return; }
   const checkedIn = await getTodayCheckIn();
   const streak = await getCheckInStreak();
-  const wordsThisMonth = await getWordsThisMonth();
-  const wordsReviewed = await getWordsReviewedThisMonth();
+  const wordsLast7 = await getWordsLast7Days();
+  const wordsReviewed = await getWordsReviewedLast7Days();
   el.classList.remove('hidden');
   el.innerHTML = `
     <div class="growth-bar">
       <div class="growth-primary">
-        ${t('english.wordsThisMonth').replace('{n}', wordsThisMonth).replace('{r}', wordsReviewed)}
+        ${t('english.wordsLast7Days').replace('{n}', wordsLast7).replace('{r}', wordsReviewed)}
       </div>
       <div class="growth-secondary">
-        🔥 ${t('english.dayStreak')}: ${streak}天 · 📝 ${checkedIn ? '✅ ' + t('english.checkInToday') : t('english.checkIn')}
+        🔥 ${t('english.dayStreak')}: ${streak}天 · ${checkedIn ? '✅ ' + t('english.checkInToday') : '📝 ' + t('english.checkIn')}
       </div>
     </div>
   `;

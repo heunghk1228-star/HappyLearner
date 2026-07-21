@@ -155,7 +155,7 @@ const I18N = {
       tagAllNote: '所選標籤會套用到所有新字詞',
       autoVoice: '自動選擇',
       soundOut: '🔊 發音拆解',
-      wordsThisMonth: '🎯 你這個月已經新學了 {n} 個新單詞，複習了 {r} 個單詞！',
+      wordsLast7Days: '🎯 最近7天新學了 {n} 個單詞，複習了 {r} 個單詞！',
       inputGuide: '輸入詞彙或整篇文章，AI 會自動提取生字'
     },
     math: {
@@ -379,7 +379,7 @@ const I18N = {
       tagAllNote: '所选标签会套用到所有新字词',
       autoVoice: '自动选择',
       soundOut: '🔊 发音拆解',
-      wordsThisMonth: '🎯 你这个月已经新学了 {n} 个新单词，复习了 {r} 个单词！',
+      wordsLast7Days: '🎯 最近7天新学了 {n} 个单词，复习了 {r} 个单词！',
       inputGuide: '输入词汇或整篇文章，AI 会自动提取生字'
     },
     math: { title: '数学', comingSoon: '即将推出...',
@@ -569,7 +569,7 @@ const I18N = {
       tagAllNote: 'Selected tag will be applied to ALL new words',
       autoVoice: 'Auto',
       soundOut: '🔊 Sound Out',
-      wordsThisMonth: '🎯 You\'ve learned {n} new words and reviewed {r} words this month!',
+      wordsLast7Days: '🎯 You have learned {n} new words and reviewed {r} words in the last 7 days!',
       inputGuide: 'Enter words or a full article — AI will extract vocabulary'
     },
     math: { title: 'Math', comingSoon: 'Coming soon...',

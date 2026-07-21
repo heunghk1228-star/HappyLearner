@@ -479,7 +479,6 @@ async function generateSentence(word, cachedSentence) {
     const blanked = cachedSentence.replace(new RegExp(word, 'gi'), '________');
     display.innerHTML = `
       <div class="sentence-text">${blanked}</div>
-      <div class="sentence-source">📚 ${t('english.cached')}</div>
     `;
     display.dataset.sentence = cachedSentence;
     display.dataset.word = word;
@@ -548,7 +547,7 @@ function showHint(wordId) {
       // Word not found in sentence — read whole thing
       const u = new SpeechSynthesisUtterance(sentence);
       u.lang = 'en-US';
-      u.rate = getSlowRate();
+      u.rate = getFastRate();
       if (availableVoices.length > 0) u.voice = pickBestVoice();
       window.speechSynthesis.speak(u);
       return;
@@ -559,7 +558,7 @@ function showHint(wordId) {
       if (part.trim()) {
         const u = new SpeechSynthesisUtterance(part);
         u.lang = 'en-US';
-        u.rate = getSlowRate();
+        u.rate = getFastRate();
         if (availableVoices.length > 0) u.voice = pickBestVoice();
         window.speechSynthesis.speak(u);
       }
@@ -679,6 +678,11 @@ function submitAnswer() {
     if (!q.isRetry) {
       correctCount++;
     }
+
+    // Regenerate fill-blank sentence after correct answer
+    if (q.type === 'fillblank' && q.word.fillblank_sentence) {
+      precacheFillBlankSentence(q.word);
+    }
   } else {
     resultArea.innerHTML = `
       <div class="result-wrong">
@@ -720,6 +724,16 @@ function nextQuestion() {
 
 function finishTest() {
   const area = document.getElementById('revisionArea');
+
+  // If there are wrong answers to retry, cycle them back in
+  if (retryQueue.length > 0) {
+    testQuestions = retryQueue;
+    retryQueue = [];
+    currentTestIndex = 0;
+    showQuestion();
+    return;
+  }
+
   const earnedGem = correctCount > 5;
   const pct = Math.round((correctCount / initialQuestionCount) * 100);
 
