@@ -369,66 +369,48 @@ function soundOutWord(word, id) {
   // Cancel any ongoing speech
   window.speechSynthesis.cancel();
   
-  // Split into letters
-  const letters = word.split('');
   const display = document.getElementById('soundOut-' + id);
   if (display) {
-    display.innerHTML = '<span class="sound-out-letters">' + letters.map((l, i) =>
-      '<span class="sound-out-letter" data-idx="' + i + '">' + l + '</span>'
-    ).join('<span class="sound-out-sep">-</span>') + '</span>';
+    display.innerHTML = '<span class="sound-out-word">🔊 ' + word + '</span>';
     display.classList.add('active');
   }
   
-  // Speak each letter with a delay
-  let delay = 0;
-  letters.forEach((letter, idx) => {
-    const utterance = new SpeechSynthesisUtterance(letter);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.5;
-    utterance.pitch = 1.2;
-    utterance.volume = 1.0;
-    
-    if (display) {
-      utterance.onstart = () => {
-        display.querySelectorAll('.sound-out-letter').forEach(s => s.classList.remove('speaking'));
-        const span = display.querySelector('.sound-out-letter[data-idx="' + idx + '"]');
-        if (span) span.classList.add('speaking');
-      };
-    }
-    
-    setTimeout(() => {
-      try {
-        window.speechSynthesis.speak(utterance);
-      } catch (e) {
-        console.warn('Sound-out speech failed:', e);
-      }
-    }, delay);
-    delay += 400;
-  });
+  // Speak the word slowly with natural pronunciation for phonics
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.35; // Very slow for clear phonics
+  utterance.pitch = 1.1;
+  utterance.volume = 1.0;
   
-  // Speak the full word at the end
-  setTimeout(() => {
-    const utterance = new SpeechSynthesisUtterance(word);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.7;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-    try {
-      window.speechSynthesis.speak(utterance);
-    } catch (e) {
-      console.warn('Sound-out final speech failed:', e);
+  const voice = pickBestVoice();
+  if (voice) utterance.voice = voice;
+  
+  if (display) {
+    utterance.onstart = () => {
+      display.querySelector('.sound-out-word')?.classList.add('speaking');
+    };
+    utterance.onend = () => {
+      display.querySelector('.sound-out-word')?.classList.remove('speaking');
+      // Auto-clear after 2s
+      setTimeout(() => {
+        display.classList.remove('active');
+        display.innerHTML = '';
+      }, 2000);
+    };
+  }
+  
+  utterance.onerror = (e) => {
+    if (e.error !== 'canceled' && e.error !== 'interrupted') {
+      console.warn('Sound-out speech error:', e.error);
     }
-    // Clear highlight after full word
-    setTimeout(() => {
-      if (display) {
-        display.querySelectorAll('.sound-out-letter').forEach(s => s.classList.remove('speaking'));
-        setTimeout(() => {
-          display.classList.remove('active');
-          display.innerHTML = '';
-        }, 2000);
-      }
-    }, 1000);
-  }, delay);
+  };
+  
+  try {
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.warn('Sound-out speech failed:', e);
+    showToast('🔇 ' + (t('english.speechUnavailable') || 'Speech not available'));
+  }
 }
 
 function testSpeechVoice() {
