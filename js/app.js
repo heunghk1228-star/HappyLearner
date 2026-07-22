@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Navigate to initial page from hash or default
-  const initialPage = getCurrentPageFromHash() || 'about';
+  const initialPage = getCurrentPageFromHash() || 'english';
   navigateTo(initialPage, false);
   
   // Auth callback
@@ -246,9 +246,13 @@ function renderEnglishPage(container) {
           <h2>${t('english.title')}</h2>
         </div>
         <div class="login-prompt">
-          <p>🔒 ${t('english.loginRequired')}</p>
-          <button class="btn btn-primary" onclick="showAuthModal()">${t('english.login')}</button>
-        </div>
+                  <p>🔒 ${t('english.loginRequired')}</p>
+                  <p class="login-prompt-sub">${t('english.loginPromptSub')}</p>
+                  <div class="login-prompt-actions">
+                    <button class="btn btn-primary" onclick="showAuthModal()">${t('english.login')}</button>
+                    <button class="btn btn-outline" onclick="handleDemoLogin()">${t('english.demoLogin')}</button>
+                  </div>
+                </div>
       </div>
     `;
     return;

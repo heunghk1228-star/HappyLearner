@@ -416,6 +416,25 @@ body {
   margin-top: 1rem;
 }
 
+.login-prompt-sub {
+  color: var(--text-light);
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.login-prompt-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.login-prompt-actions .btn {
+  margin-top: 0;
+}
+
 .streak-bar {
   background: linear-gradient(135deg, #fefce8, #fef9c3);
   padding: 0.75rem 1.25rem;
