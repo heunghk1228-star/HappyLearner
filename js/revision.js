@@ -11,8 +11,8 @@ let retryQueue = [];
 let leveledUpWords = [];
 let initialQuestionCount = 0;
 
-// Spelling-only mode: all questions are spelling type, only newbee words can level up
-let spellingOnlyMode = localStorage.getItem('spellingOnlyMode') === 'true';
+// Spelling test mode: 'spelling-only' | 'mixed'
+let revisionSpellingMode = localStorage.getItem('revisionSpellingMode') || 'mixed';
 
 // Tier filter state for word selection (specify mode)
 let revisionActiveTiers = ['newbee', 'well-tested', 'mastered'];
@@ -40,12 +40,17 @@ async function showRevisionPage() {
       <div class="page-header">
         <h2>${t('english.revisionTitle')}</h2>
       </div>
-      <div class="spelling-toggle-row">
-        <label class="spelling-toggle-label">
-          <input type="checkbox" id="spellingOnlyToggle" ${spellingOnlyMode ? 'checked' : ''} onchange="toggleSpellingOnly()">
-          <span>🔤 ${t('english.spellingOnly')}</span>
-        </label>
-        <div class="spelling-toggle-desc">${t('english.spellingOnlyDesc')}</div>
+      <div class="revision-spelling-modes">
+        <div class="revision-mode-card ${revisionSpellingMode === 'spelling-only' ? 'active' : ''}" onclick="selectSpellingMode('spelling-only')">
+          <div class="mode-icon">🔤</div>
+          <h3>${t('english.spellingMode')}</h3>
+          <p>${t('english.spellingModeDesc')}</p>
+        </div>
+        <div class="revision-mode-card ${revisionSpellingMode === 'mixed' ? 'active' : ''}" onclick="selectSpellingMode('mixed')">
+          <div class="mode-icon">🔤✏️</div>
+          <h3>${t('english.mixedMode')}</h3>
+          <p>${t('english.mixedModeDesc')}</p>
+        </div>
       </div>
       <div class="revision-modes">
         <div class="mode-card" onclick="startRevision('auto')">
@@ -63,10 +68,14 @@ async function showRevisionPage() {
   `;
 }
 
-// Spelling-only toggle handler
-function toggleSpellingOnly() {
-  spellingOnlyMode = document.getElementById('spellingOnlyToggle').checked;
-  localStorage.setItem('spellingOnlyMode', spellingOnlyMode);
+// Spelling mode selector
+function selectSpellingMode(mode) {
+  revisionSpellingMode = mode;
+  localStorage.setItem('revisionSpellingMode', mode);
+  // Update active state on cards
+  document.querySelectorAll('.revision-spelling-modes .revision-mode-card').forEach(card => {
+    card.classList.toggle('active', card.getAttribute('onclick')?.includes(mode));
+  });
 }
 
 // ============================================================
@@ -376,7 +385,7 @@ function prepareQuestions() {
     const level = word.level || 1;
     const pos = (word.pos || word.part_of_speech || '').toLowerCase();
     // Name/place words are always spelling only
-    const qType = spellingOnlyMode || pos.includes('name') ? 'spelling' : (level <= 2 ? 'spelling' : 'fillblank');
+    const qType = revisionSpellingMode === 'spelling-only' || pos.includes('name') ? 'spelling' : (level <= 2 ? 'spelling' : 'fillblank');
 
     testQuestions.push({
       word,
@@ -663,7 +672,7 @@ async function submitAnswer() {
     // Auto mode: level up (max 1 level per day, skip if hinted)
     if (testMode === 'auto' && q.word.level < 6 && !q.hinted) {
       // Spelling-only mode: only newbee words can level up
-      if (spellingOnlyMode && q.word.level >= 3) {
+      if (revisionSpellingMode === 'spelling-only' && q.word.level >= 3) {
         // Block leveling up well-tested+ words
       } else {
         const today = new Date().toISOString().split('T')[0];

@@ -1006,38 +1006,49 @@ body {
   margin-bottom: 2rem;
 }
 
-.spelling-toggle-row {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
+.revision-spelling-modes {
   display: flex;
-  align-items: center;
   gap: 0.75rem;
-  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
-.spelling-toggle-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.spelling-toggle-label input[type="checkbox"] {
-  width: 1.1rem;
-  height: 1.1rem;
-  cursor: pointer;
-}
-
-.spelling-toggle-desc {
-  font-size: 0.8rem;
-  color: var(--text-light);
+.revision-mode-card {
   flex: 1;
-  min-width: 200px;
+  background: var(--card-bg);
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.revision-mode-card:hover {
+  border-color: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.revision-mode-card.active {
+  border-color: var(--primary);
+  background: #eef2ff;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.revision-mode-card .mode-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.revision-mode-card h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.revision-mode-card p {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin: 0;
+  line-height: 1.4;
 }
 
 .mode-card {
