@@ -247,7 +247,6 @@ async function showWordSelection(words) {
     // Sync tier button active states
     syncRevisionTierButtons();
   }
-  }
   renderRevisionWordList(words);
   updateSelectionCount(hasRestoredState ? revisionSelectedIds.size : 0);
 }
