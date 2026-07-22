@@ -32,30 +32,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   setLanguage(savedLang);
 
   // Hash-based routing
-  // Guard: skip spurious hashchange when tab is restored from BFCache
   window.addEventListener('hashchange', () => {
     if (document.hidden) return;
-    const newHash = window.location.hash;
-    if (newHash === lastKnownHash) return;
-    lastKnownHash = newHash;
     const page = getCurrentPageFromHash();
     if (page) navigateTo(page, false);
   });
 
   // Browser back/forward
   window.addEventListener('popstate', () => {
-    const newHash = window.location.hash;
-    if (newHash === lastKnownHash) return;
-    lastKnownHash = newHash;
     const page = getCurrentPageFromHash();
     if (page) navigateTo(page, false);
-  });
-
-  // Sync hash when tab becomes visible (prevents BFCache spurious events)
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      lastKnownHash = window.location.hash;
-    }
   });
   
   // Navigate to initial page from hash or default
