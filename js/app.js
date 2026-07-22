@@ -3,12 +3,55 @@
 // ============================================================
 
 // ============================================================
-// Initialization
+// BFCache Optimization
 // ============================================================
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await initSupabase();
+let isRestoredFromBFCache = false;
+let _bfcacheState = {}; // Save page state before hide
+
+window.addEventListener('pageshow', (event) => {
+  isRestoredFromBFCache = event.persisted;
+  if (isRestoredFromBFCache) {
+    // BFCache has the DOM already in the correct rendered state.
+    // We only need to re-sync auth (JS variables were reset).
+    initSupabase();
+    restoreAppStateFromCache();
+  }
+});
+
+window.addEventListener('pagehide', () => {
+  saveAppStateBeforeHide();
+});
+
+function saveAppStateBeforeHide() {
+  _bfcacheState = {
+    hash: window.location.hash,
+    scrollY: window.scrollY,
+    page: document.querySelector('.nav-link.active')?.dataset.page || 'about',
+    subPage: getCurrentSubPageFromHash()
+  };
+}
+
+function restoreAppStateFromCache() {
+  const state = _bfcacheState;
+  if (!state || !state.hash) return;
   
+  // Sync the hash guard so navigateTo doesn't get confused
+  if (typeof lastKnownHash !== 'undefined') {
+    lastKnownHash = state.hash;
+  }
+  
+  // Restore the nav link active state from the DOM that BFCache kept
+  // No re-render needed — BFCache preserved the DOM
+  console.log('🔄 BFCache: restored state from', state.hash);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Skip the full navigateTo on BFCache restore — pageshow already handled it
+  if (isRestoredFromBFCache) return;
+
+  await initSupabase();
+
   // Set up navigation
   document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', (e) => {
@@ -16,25 +59,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       navigateTo(link.dataset.page, true);
     });
   });
-  
+
   // Set up auth modal
   document.getElementById('loginBtn')?.addEventListener('click', showAuthModal);
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     await logout();
   });
-  
+
   document.getElementById('authModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) hideAuthModal();
   });
-  
+
   // Load saved language
   const savedLang = localStorage.getItem('lang') || 'zh-TW';
   setLanguage(savedLang);
 
   // Hash-based routing
-  // Guard: skip spurious events on tab switch / BFCache restore
   window.addEventListener('hashchange', () => {
-    if (document.hidden) return;
+    if (document.hidden) return;          // skip while tab is hidden
     const newHash = window.location.hash;
     if (newHash === lastKnownHash) return;
     lastKnownHash = newHash;
@@ -51,22 +93,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (page) navigateTo(page, false);
   });
 
-  // Sync lastKnownHash when tab becomes visible (prevents spurious hashchange/popstate
-  // that some browsers fire on BFCache restore or tab switch)
-  // Also re-restore sub-page state after BFCache resumes (JS variables are reset)
+  // Sync lastKnownHash when tab becomes visible (prevents stale guard on hashchange
+  // after returning from another tab where no hashchange fired)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       lastKnownHash = window.location.hash;
-      // BFCache restore: JS variables are reset but DOM is intact.
-      // Re-open sub-page so it re-initialises its own state from sessionStorage.
-      const page = getCurrentPageFromHash();
-      const sub  = getCurrentSubPageFromHash();
-      if (page === 'english' && sub) {
-        setTimeout(() => restoreEnglishSubPage(sub), 0);
-      }
     }
   });
-  
+
   // Navigate to initial page from hash or default
   const initialPage = getCurrentPageFromHash() || 'about';
   navigateTo(initialPage, false);
@@ -121,6 +155,12 @@ function getCurrentSubPageFromHash() {
 let lastKnownHash = window.location.hash || '';
 
 function navigateTo(page, pushHash) {
+  // BFCache restore: skip full re-render to avoid flash
+  if (isRestoredFromBFCache && window.location.hash === lastKnownHash) {
+    isRestoredFromBFCache = false; // Only skip once
+    return;
+  }
+  
   // Close mobile menu
   const nav = document.getElementById('mainNav');
   if (nav) nav.classList.remove('open');
@@ -274,29 +314,6 @@ function renderComingSoonPage(container, subject) {
       <p>${t(`${subject}.comingSoon`)}</p>
     </div>
   `;
-}
-
-// ============================================================
-// Sub-page Restoration (after BFCache / visibility resume)
-// ============================================================
-
-async function restoreEnglishSubPage(sub) {
-  if (!currentUser) return;
-  switch (sub) {
-    case 'flashcards':
-      // Restore filter state from sessionStorage before opening
-      restoreFlashcardState();
-      await openFlashcards();
-      break;
-    case 'vocab':
-      restoreVocabState();
-      await openVocabularyBook();
-      break;
-    case 'revision':
-      restoreRevisionState();
-      showRevisionPage();
-      break;
-  }
 }
 
 // ============================================================

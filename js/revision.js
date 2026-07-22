@@ -49,6 +49,10 @@ function restoreRevisionState() {
 // ============================================================
 
 async function showRevisionPage() {
+  // BFCache restore: skip re-render to avoid flash
+  if (isRestoredFromBFCache && document.getElementById('revisionArea')) {
+    return;
+  }
   if (!currentUser) {
     alert(t('english.loginRequired'));
     return;

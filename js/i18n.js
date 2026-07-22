@@ -159,7 +159,8 @@ const I18N = {
       tagAllNote: '所選標籤會套用到所有新字詞',
       autoVoice: '自動選擇',
       wordsLast7Days: '🎯 最近7天新學了 {n} 個單詞，複習了 {r} 個單詞！',
-      inputGuide: '輸入詞彙或整篇文章，AI 會自動提取生字'
+      inputGuide: '輸入詞彙或整篇文章，AI 會自動提取生字',
+      demoLogin: '👤 示範帳戶'
     },
     math: {
       title: '數學',
@@ -386,7 +387,8 @@ const I18N = {
       tagAllNote: '所选标签会套用到所有新字词',
       autoVoice: '自动选择',
       wordsLast7Days: '🎯 最近7天新学了 {n} 个单词，复习了 {r} 个单词！',
-      inputGuide: '输入词汇或整篇文章，AI 会自动提取生字'
+      inputGuide: '输入词汇或整篇文章，AI 会自动提取生字',
+      demoLogin: '👤 示范账户'
     },
     math: { title: '数学', comingSoon: '即将推出...',
       golTitle: '🧬 Conway\'s Game of Life',
@@ -579,7 +581,8 @@ const I18N = {
       tagAllNote: 'Selected tag will be applied to ALL new words',
       autoVoice: 'Auto',
       wordsLast7Days: '🎯 You have learned {n} new words and reviewed {r} words in the last 7 days!',
-      inputGuide: 'Enter words or a full article — AI will extract vocabulary'
+      inputGuide: 'Enter words or a full article — AI will extract vocabulary',
+      demoLogin: '👤 Demo Account'
     },
     math: { title: 'Math', comingSoon: 'Coming soon...',
       golTitle: '🧬 Conway\'s Game of Life',

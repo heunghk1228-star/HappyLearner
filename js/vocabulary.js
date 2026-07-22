@@ -920,6 +920,10 @@ function showEnglishPage() {
 }
 
 async function openVocabularyBook() {
+  // BFCache restore: skip re-render to avoid flash
+  if (isRestoredFromBFCache && document.getElementById('vocabList')) {
+    return;
+  }
   if (window.location.hash !== '#english/vocab') {
     history.pushState({}, '', '#english/vocab');
     lastKnownHash = '#english/vocab';
@@ -1882,5 +1886,127 @@ async function deleteWordTagManager(wordId) {
     showWordTagManager(wordId);
   } catch(e) {
     showToast('❌ ' + e.message);
+  }
+}
+
+// ============================================================
+// Demo Account: seed vocabulary
+// ============================================================
+
+const DEMO_VOCABULARY = [
+  // Level 1-2 (newbee) — simple common words
+  { word: 'apple', meaning: '蘋果', pos: 'noun', level: 1 },
+  { word: 'book', meaning: '書', pos: 'noun', level: 1 },
+  { word: 'cat', meaning: '貓', pos: 'noun', level: 1 },
+  { word: 'dog', meaning: '狗', pos: 'noun', level: 1 },
+  { word: 'eat', meaning: '食', pos: 'verb', level: 1 },
+  { word: 'fish', meaning: '魚', pos: 'noun', level: 1 },
+  { word: 'good', meaning: '好', pos: 'adjective', level: 1 },
+  { word: 'happy', meaning: '開心', pos: 'adjective', level: 1 },
+  { word: 'jump', meaning: '跳', pos: 'verb', level: 1 },
+  { word: 'king', meaning: '國王', pos: 'noun', level: 1 },
+  { word: 'love', meaning: '愛', pos: 'verb', level: 2 },
+  { word: 'moon', meaning: '月亮', pos: 'noun', level: 2 },
+  { word: 'name', meaning: '名', pos: 'noun', level: 2 },
+  { word: 'open', meaning: '打開', pos: 'verb', level: 2 },
+  { word: 'play', meaning: '玩', pos: 'verb', level: 2 },
+  { word: 'quick', meaning: '快', pos: 'adjective', level: 2 },
+  { word: 'run', meaning: '跑', pos: 'verb', level: 2 },
+  { word: 'sun', meaning: '太陽', pos: 'noun', level: 2 },
+  { word: 'tree', meaning: '樹', pos: 'noun', level: 2 },
+  { word: 'water', meaning: '水', pos: 'noun', level: 2 },
+  // Level 3-5 (well-tested) — intermediate
+  { word: 'beautiful', meaning: '美麗', pos: 'adjective', level: 3 },
+  { word: 'celebrate', meaning: '慶祝', pos: 'verb', level: 3 },
+  { word: 'discover', meaning: '發現', pos: 'verb', level: 3 },
+  { word: 'elephant', meaning: '大笨象', pos: 'noun', level: 3 },
+  { word: 'friendly', meaning: '友善', pos: 'adjective', level: 3 },
+  { word: 'garden', meaning: '花園', pos: 'noun', level: 3 },
+  { word: 'honest', meaning: '誠實', pos: 'adjective', level: 3 },
+  { word: 'imagine', meaning: '想像', pos: 'verb', level: 4 },
+  { word: 'journey', meaning: '旅程', pos: 'noun', level: 4 },
+  { word: 'kitchen', meaning: '廚房', pos: 'noun', level: 4 },
+  { word: 'library', meaning: '圖書館', pos: 'noun', level: 4 },
+  { word: 'mountain', meaning: '山', pos: 'noun', level: 4 },
+  { word: 'natural', meaning: '自然', pos: 'adjective', level: 4 },
+  { word: 'opinion', meaning: '意見', pos: 'noun', level: 5 },
+  { word: 'patient', meaning: '耐心', pos: 'adjective', level: 5 },
+  { word: 'quickly', meaning: '快速地', pos: 'adverb', level: 5 },
+  { word: 'remember', meaning: '記住', pos: 'verb', level: 5 },
+  { word: 'strange', meaning: '奇怪', pos: 'adjective', level: 5 },
+  { word: 'thousand', meaning: '一千', pos: 'number', level: 5 },
+  { word: 'usually', meaning: '通常', pos: 'adverb', level: 5 },
+  // Level 6 (mastered) — advanced
+  { word: 'adventure', meaning: '冒險', pos: 'noun', level: 6 },
+  { word: 'brilliant', meaning: '輝煌', pos: 'adjective', level: 6 },
+  { word: 'curious', meaning: '好奇', pos: 'adjective', level: 6 },
+  { word: 'dangerous', meaning: '危險', pos: 'adjective', level: 6 },
+  { word: 'education', meaning: '教育', pos: 'noun', level: 6 },
+  { word: 'furniture', meaning: '傢俬', pos: 'noun', level: 6 },
+  { word: 'generous', meaning: '慷慨', pos: 'adjective', level: 6 },
+  { word: 'horrible', meaning: '可怕', pos: 'adjective', level: 6 },
+  { word: 'important', meaning: '重要', pos: 'adjective', level: 6 },
+  { word: 'knowledge', meaning: '知識', pos: 'noun', level: 6 },
+];
+
+const DEMO_EMAIL = 'demo@happylearner.app';
+const DEMO_PASSWORD = 'demo2026';
+
+async function handleDemoLogin() {
+  showLoading();
+  try {
+    // Try to login first
+    await login(DEMO_EMAIL, DEMO_PASSWORD);
+    // Check if demo vocabulary exists, seed if empty
+    const words = await fetchVocabulary();
+    if (words.length === 0) {
+      await seedDemoVocabulary();
+    }
+    hideLoading();
+    showToast('👋 歡迎使用示範帳戶！');
+  } catch (e) {
+    // Login failed — try to register the demo account
+    try {
+      await register(DEMO_EMAIL, DEMO_PASSWORD);
+      // Wait a moment for auth to settle, then seed
+      await new Promise(r => setTimeout(r, 1000));
+      await seedDemoVocabulary();
+      hideLoading();
+      showToast('👋 示範帳戶已建立！');
+    } catch (regErr) {
+      hideLoading();
+      showToast('❌ 示範帳戶登入失敗: ' + regErr.message);
+    }
+  }
+}
+
+async function seedDemoVocabulary() {
+  if (!currentUser) return;
+  
+  const toInsert = DEMO_VOCABULARY.map(w => ({
+    user_id: currentUser.id,
+    word: w.word,
+    chinese_meaning: w.meaning,
+    part_of_speech: w.pos,
+    level: w.level,
+    tier: w.level <= 2 ? 'newbee' : w.level <= 5 ? 'well-tested' : 'mastered',
+    last_reviewed: new Date().toISOString().split('T')[0],
+    sample_sentence: ''
+  }));
+  
+  // Insert in batches of 10
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+    const batch = toInsert.slice(i, i + BATCH_SIZE);
+    try {
+      const { error } = await supabaseClient
+        .from('vocabulary')
+        .insert(batch);
+      if (error && error.code !== '23505') { // 23505 = duplicate
+        console.warn('Seed batch failed:', error);
+      }
+    } catch (e) {
+      console.warn('Seed insert error:', e);
+    }
   }
 }

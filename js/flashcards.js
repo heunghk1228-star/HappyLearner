@@ -420,6 +420,11 @@ async function callAISentence(word) {
 // ============================================================
 
 async function openFlashcards() {
+  // BFCache restore: if flashcards container already exists, skip re-render
+  if (isRestoredFromBFCache && document.getElementById('flashcardContainer')) {
+    return;
+  }
+  
   if (!currentUser) {
     alert(t('english.loginRequired'));
     return;
