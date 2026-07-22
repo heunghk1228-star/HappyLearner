@@ -94,6 +94,8 @@ async function startRevision(mode) {
   // Hide the mode selection cards when auto mode starts directly
   // (specify mode keeps them visible during word selection)
   const modes = document.querySelector('.revision-modes');
+  const spellingModes = document.querySelector('.revision-spelling-modes');
+  if (spellingModes) spellingModes.style.display = 'none';
 
   const words = await fetchVocabulary();
   if (!words.length) {
@@ -342,6 +344,8 @@ function confirmWordSelection() {
   // Hide mode cards — test is about to start
   const modes = document.querySelector('.revision-modes');
   if (modes) modes.style.display = 'none';
+  const spellingModes = document.querySelector('.revision-spelling-modes');
+  if (spellingModes) spellingModes.style.display = 'none';
 
   const totalSelected = revisionSelectedIds.size;
   if (totalSelected === 0) {
