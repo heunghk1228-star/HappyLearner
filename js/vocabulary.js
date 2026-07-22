@@ -1967,15 +1967,37 @@ async function handleDemoLogin() {
   } catch (e) {
     // Login failed — try to register the demo account
     try {
-      await register(DEMO_EMAIL, DEMO_PASSWORD);
-      // Wait a moment for auth to settle, then seed
+      const result = await register(DEMO_EMAIL, DEMO_PASSWORD);
+      // If email confirmation required, login might still work
+      if (result?.user?.identities?.length === 0) {
+        // Email confirmation required — try to login anyway
+      }
       await new Promise(r => setTimeout(r, 1000));
+      // Try login again after registration
+      await login(DEMO_EMAIL, DEMO_PASSWORD);
       await seedDemoVocabulary();
       hideLoading();
       showToast('👋 示範帳戶已建立！');
     } catch (regErr) {
-      hideLoading();
-      showToast('❌ 示範帳戶登入失敗: ' + regErr.message);
+      // Registration failed — account likely already exists with rate limit
+      // Try one more login attempt
+      try {
+        await login(DEMO_EMAIL, DEMO_PASSWORD);
+        const words = await fetchVocabulary();
+        if (words.length === 0) {
+          await seedDemoVocabulary();
+        }
+        hideLoading();
+        showToast('👋 歡迎使用示範帳戶！');
+      } catch (loginErr2) {
+        hideLoading();
+        const msg = loginErr2.message || regErr.message;
+        if (msg.includes('rate limit') || msg.includes('Email not confirmed')) {
+          showToast('⚠️ 示範帳戶需要喺 Supabase 關閉「Confirm email」先用到');
+        } else {
+          showToast('❌ 示範帳戶登入失敗: ' + msg);
+        }
+      }
     }
   }
 }
