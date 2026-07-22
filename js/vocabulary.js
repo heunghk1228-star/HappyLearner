@@ -783,12 +783,12 @@ async function callAIBatchMeanings(words) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
+          'Authorization': `Bearer ${CONFIG.openrouter.apiKey}`,
           'HTTP-Referer': window.location.origin || 'https://happylearner2077.vercel.app',
           'X-Title': 'HappyLearner'
         },
         body: JSON.stringify({
-          model: CONFIG.openai.model || 'deepseek/deepseek-v4-flash',
+          model: CONFIG.openrouter.model || 'deepseek/deepseek-v4-flash',
           messages: [
             {
               role: 'system',
@@ -854,12 +854,12 @@ async function callAIBatchNormalize(words) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
+          'Authorization': `Bearer ${CONFIG.openrouter.apiKey}`,
           'HTTP-Referer': window.location.origin || 'https://happylearner2077.vercel.app',
           'X-Title': 'HappyLearner'
         },
         body: JSON.stringify({
-          model: CONFIG.openai.model || 'deepseek/deepseek-v4-flash',
+          model: CONFIG.openrouter.model || 'deepseek/deepseek-v4-flash',
           messages: [
             {
               role: 'system',

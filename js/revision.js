@@ -619,12 +619,12 @@ async function callAISentence(word) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
+      'Authorization': `Bearer ${CONFIG.openrouter.apiKey}`,
       'HTTP-Referer': window.location.origin || 'https://happylearner2077.vercel.app',
       'X-Title': 'HappyLearner'
     },
     body: JSON.stringify({
-      model: CONFIG.openai.model,
+      model: CONFIG.openrouter.model,
       messages: [
         {
           role: 'system',

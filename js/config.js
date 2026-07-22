@@ -8,7 +8,7 @@ const CONFIG = {
     anonKey: 'sb_publishable_JyZkvBZdi8LkdsupkKtndA_zCMl4ePw'
   },
   // Fill in your API key in js/secrets.js (gitignored)
-  openai: {
+  openrouter: {
     apiKey: '',
     model: 'deepseek/deepseek-v4-flash'
   },

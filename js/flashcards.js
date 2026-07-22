@@ -125,7 +125,7 @@ function renderGrid() {
   }
 
   // Show AI status indicator
-  const aiStatus = CONFIG.openai.apiKey ? '' : '<div class="ai-warning">⚠️ AI 未設定 — 檢查 API Key</div>';
+  const aiStatus = CONFIG.openrouter.apiKey ? '' : '<div class="ai-warning">⚠️ AI 未設定 — 檢查 API Key</div>';
 
   const totalPages = Math.ceil(currentFlashcards.length / CARDS_PER_PAGE);
   const start = currentPage * CARDS_PER_PAGE;
@@ -393,12 +393,12 @@ async function callAISentence(word) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CONFIG.openai.apiKey}`,
+      'Authorization': `Bearer ${CONFIG.openrouter.apiKey}`,
       'HTTP-Referer': window.location.origin || 'https://happylearner2077.vercel.app',
       'X-Title': 'HappyLearner'
     },
     body: JSON.stringify({
-      model: CONFIG.openai.model,
+      model: CONFIG.openrouter.model,
       messages: [
         {
           role: 'system',
@@ -469,34 +469,6 @@ async function openFlashcards() {
   currentFlashcards = words;
   renderFlashcards(words);
   hideLoading();
-}
-
-async function generateAllSentences() {
-  const wordsWithout = currentFlashcards.filter(w => !w.sample_sentence && !getFallbackSentence(w.word));
-  if (!wordsWithout.length) { showToast('✅ All words have sentences!'); return; }
-  if (!confirm(`Generate sentences for ${wordsWithout.length} words?`)) return;
-
-  showLoading();
-  let count = 0;
-  for (const w of wordsWithout) {
-    try {
-      const sentence = await callAISentence(w.word);
-      if (sentence) {
-        await supabaseClient.from('vocabulary').update({ sample_sentence: sentence }).eq('id', w.id);
-        w.sample_sentence = sentence;
-        count++;
-      }
-    } catch {
-      const fb = `This is a sample sentence using the word "${w.word}".`;
-      await supabaseClient.from('vocabulary').update({ sample_sentence: fb }).eq('id', w.id);
-      w.sample_sentence = fb;
-      count++;
-    }
-    await new Promise(r => setTimeout(r, 500));
-  }
-  hideLoading();
-  renderGrid();
-  showToast(`✅ ${count}/${wordsWithout.length} sentences generated!`);
 }
 
 async function regenerateSentence(wordId) {
