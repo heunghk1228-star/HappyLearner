@@ -6,6 +6,7 @@ async function openAccountSettings() {
   document.getElementById('userDropdown').classList.add('hidden');
   if (window.location.hash !== '#english/settings') {
     history.pushState({}, '', '#english/settings');
+    lastKnownHash = '#english/settings';
   }
   showLoading();
   const profile = await getProfile();
