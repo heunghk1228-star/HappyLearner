@@ -925,6 +925,13 @@ async function openVocabularyBook() {
     lastKnownHash = '#english/vocab';
   }
   isInSubPage = true;
+
+  // Manual entry: clear restored state so fresh defaults apply
+  if (!sessionStorage.getItem(VB_SS_TIERS)) {
+    vocabActiveTiers = ['newbee', 'well-tested', 'mastered'];
+    currentTagFilter = null;
+  }
+
   showLoading();
   const words = await fetchVocabulary();
   
@@ -958,9 +965,9 @@ async function openVocabularyBook() {
                placeholder="${t('english.search')}" 
                oninput="searchVocabList(this.value)">
         <div class="tier-filter-btns" style="margin:0.25rem 0">
-          <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleVocabTier('newbee')">${t('english.newbee')}</button>
-          <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleVocabTier('well-tested')">${t('english.wellTested')}</button>
-          <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleVocabTier('mastered')">${t('english.mastered')}</button>
+          <button class="tier-btn tier-newbee ${vocabActiveTiers.includes('newbee') ? 'active' : ''}" data-tier="newbee" onclick="toggleVocabTier('newbee')">${t('english.newbee')}</button>
+          <button class="tier-btn tier-well-tested ${vocabActiveTiers.includes('well-tested') ? 'active' : ''}" data-tier="well-tested" onclick="toggleVocabTier('well-tested')">${t('english.wellTested')}</button>
+          <button class="tier-btn tier-mastered ${vocabActiveTiers.includes('mastered') ? 'active' : ''}" data-tier="mastered" onclick="toggleVocabTier('mastered')">${t('english.mastered')}</button>
         </div>
         <div class="tag-filter-group">
           <select class="input" id="tagFilter" onchange="filterByTag(this.value)" style="max-width:140px;font-size:0.85rem">
@@ -992,6 +999,15 @@ async function openVocabularyBook() {
   const listEl = document.getElementById('vocabList');
   if (listEl) listEl.innerHTML = await renderVocabList(words);
   await loadTagFilter();
+
+  // Apply restored tag filter (tier filter is already baked into the template + renderVocabList uses restored vocabActiveTiers)
+  const hasRestoredState = sessionStorage.getItem(VB_SS_TIERS) !== null || sessionStorage.getItem(VB_SS_TAG) !== null;
+  if (hasRestoredState && currentTagFilter) {
+    const tagSel = document.getElementById('tagFilter');
+    if (tagSel) tagSel.value = currentTagFilter;
+    await applyVocabFilter('');
+  }
+
   hideLoading();
 }
 
@@ -1073,6 +1089,20 @@ async function searchVocabList(query) {
 let currentTagFilter = null;
 let vocabActiveTiers = ['newbee', 'well-tested', 'mastered'];
 
+// sessionStorage keys for vocab filter persistence (survives BFCache / tab switch)
+const VB_SS_TIERS = 'vb_activeTiers';
+const VB_SS_TAG   = 'vb_tagFilter';
+
+// Restore vocab filter state from sessionStorage (called before openVocabularyBook)
+function restoreVocabState() {
+  const saved = sessionStorage.getItem(VB_SS_TIERS);
+  if (saved) {
+    try { vocabActiveTiers = JSON.parse(saved); } catch (_) {}
+  }
+  const savedTag = sessionStorage.getItem(VB_SS_TAG);
+  if (savedTag !== null) currentTagFilter = savedTag || null;
+}
+
 async function loadTagFilter() {
   const select = document.getElementById('tagFilter');
   if (!select) return;
@@ -1105,6 +1135,7 @@ async function doCreateInlineTag() {
 
 async function filterByTag(tagId) {
   currentTagFilter = tagId || null;
+  sessionStorage.setItem(VB_SS_TAG, currentTagFilter || '');
   const query = document.getElementById('vocabSearch')?.value || '';
   await applyVocabFilter(query);
 }
@@ -1118,6 +1149,7 @@ function toggleVocabTier(tier) {
     vocabActiveTiers.push(tier);
     document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.add('active');
   }
+  sessionStorage.setItem(VB_SS_TIERS, JSON.stringify(vocabActiveTiers));
   const query = document.getElementById('vocabSearch')?.value || '';
   applyVocabFilter(query);
 }

@@ -20,6 +20,30 @@ let revisionTagFilter = '';
 let revisionSelectedIds = new Set(); // Track checked word IDs across filter changes
 let revisionWordData = {}; // id -> word object for selected words
 
+// sessionStorage keys for revision filter persistence (survives BFCache / tab switch)
+const REV_SS_TIERS  = 'rev_activeTiers';
+const REV_SS_TAG    = 'rev_tagFilter';
+const REV_SS_IDS   = 'rev_selectedIds';
+const REV_SS_DATA  = 'rev_wordData';
+
+// Restore revision filter/selection state from sessionStorage (call before showRevisionPage)
+function restoreRevisionState() {
+  const savedTiers = sessionStorage.getItem(REV_SS_TIERS);
+  if (savedTiers) {
+    try { revisionActiveTiers = JSON.parse(savedTiers); } catch (_) {}
+  }
+  const savedTag = sessionStorage.getItem(REV_SS_TAG);
+  if (savedTag !== null) revisionTagFilter = savedTag;
+  const savedIds = sessionStorage.getItem(REV_SS_IDS);
+  if (savedIds) {
+    try { revisionSelectedIds = new Set(JSON.parse(savedIds)); } catch (_) {}
+  }
+  const savedData = sessionStorage.getItem(REV_SS_DATA);
+  if (savedData) {
+    try { revisionWordData = JSON.parse(savedData); } catch (_) {}
+  }
+}
+
 // ============================================================
 // Page: Main entry — show mode selection
 // ============================================================
@@ -34,6 +58,16 @@ async function showRevisionPage() {
     lastKnownHash = '#english/revision';
   }
   isInSubPage = true;
+
+  // Manual entry: clear restored state so fresh defaults apply
+  // (restoreRevisionState is called externally before this when BFCache resumes)
+  if (!sessionStorage.getItem(REV_SS_IDS)) {
+    // Fresh entry: reset filter state
+    revisionActiveTiers = ['newbee', 'well-tested', 'mastered'];
+    revisionTagFilter = '';
+    revisionSelectedIds = new Set();
+    revisionWordData = {};
+  }
 
   const page = document.getElementById('pageContent');
   page.innerHTML = `
@@ -90,6 +124,10 @@ async function startRevision(mode) {
   retryQueue = [];
   leveledUpWords = [];
   initialQuestionCount = 0;
+
+  // Test starting: clear persisted selection so next fresh visit resets filters
+  sessionStorage.removeItem(REV_SS_IDS);
+  sessionStorage.removeItem(REV_SS_DATA);
 
   // Hide the mode selection cards when auto mode starts directly
   // (specify mode keeps them visible during word selection)
@@ -165,9 +203,9 @@ async function showWordSelection(words) {
         <div class="filter-row">
           <label>📊 ${t('english.level')}:</label>
           <div class="tier-filter-btns">
-            <button class="tier-btn tier-newbee active" data-tier="newbee" onclick="toggleRevisionTier('newbee')">${t('english.newbee')}</button>
-            <button class="tier-btn tier-well-tested active" data-tier="well-tested" onclick="toggleRevisionTier('well-tested')">${t('english.wellTested')}</button>
-            <button class="tier-btn tier-mastered active" data-tier="mastered" onclick="toggleRevisionTier('mastered')">${t('english.mastered')}</button>
+            <button class="tier-btn tier-newbee ${revisionActiveTiers.includes('newbee') ? 'active' : ''}" data-tier="newbee" onclick="toggleRevisionTier('newbee')">${t('english.newbee')}</button>
+            <button class="tier-btn tier-well-tested ${revisionActiveTiers.includes('well-tested') ? 'active' : ''}" data-tier="well-tested" onclick="toggleRevisionTier('well-tested')">${t('english.wellTested')}</button>
+            <button class="tier-btn tier-mastered ${revisionActiveTiers.includes('mastered') ? 'active' : ''}" data-tier="mastered" onclick="toggleRevisionTier('mastered')">${t('english.mastered')}</button>
           </div>
         </div>
       </div>
@@ -193,10 +231,21 @@ async function showWordSelection(words) {
   `;
 
   // Reset selection tracking BEFORE rendering so defaults are clean
-  revisionSelectedIds = new Set();
-  revisionWordData = {};
+  // (skip reset if restoreRevisionState was called — state is already populated)
+  const hasRestoredState = sessionStorage.getItem(REV_SS_IDS) !== null;
+  if (!hasRestoredState) {
+    revisionSelectedIds = new Set();
+    revisionWordData = {};
+  } else {
+    // Apply restored tag filter to DOM
+    const tagSel = document.getElementById('revisionTagFilter');
+    if (tagSel && revisionTagFilter) tagSel.value = revisionTagFilter;
+    // Sync tier button active states
+    syncRevisionTierButtons();
+  }
+  }
   renderRevisionWordList(words);
-  updateSelectionCount(0);
+  updateSelectionCount(hasRestoredState ? revisionSelectedIds.size : 0);
 }
 
 function renderRevisionWordList(words) {
@@ -270,7 +319,13 @@ function onRevisionCheckChange(el, id) {
   } else {
     revisionSelectedIds.delete(id);
   }
+  saveRevisionSelection();
   updateSelectionCount(document.querySelectorAll('#revisionWordList label.selection-item').length);
+}
+
+function saveRevisionSelection() {
+  sessionStorage.setItem(REV_SS_IDS, JSON.stringify([...revisionSelectedIds]));
+  sessionStorage.setItem(REV_SS_DATA, JSON.stringify(revisionWordData));
 }
 
 function updateSelectionCount(visibleCount) {
@@ -316,6 +371,7 @@ function toggleSelectAll() {
       revisionSelectedIds.delete(cb.value);
     }
   });
+  saveRevisionSelection();
   updateSelectionCount();
 }
 
@@ -328,11 +384,21 @@ function toggleRevisionTier(tier) {
     revisionActiveTiers.push(tier);
     document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.add('active');
   }
+  sessionStorage.setItem(REV_SS_TIERS, JSON.stringify(revisionActiveTiers));
   fetchVocabulary().then(words => renderRevisionWordList(words));
+}
+
+function syncRevisionTierButtons() {
+  ['newbee', 'well-tested', 'mastered'].forEach(tier => {
+    const btn = document.querySelector(`.tier-btn[data-tier="${tier}"]`);
+    if (!btn) return;
+    btn.classList.toggle('active', revisionActiveTiers.includes(tier));
+  });
 }
 
 function onRevisionFilterChange() {
   revisionTagFilter = document.getElementById('revisionTagFilter').value;
+  sessionStorage.setItem(REV_SS_TAG, revisionTagFilter);
   fetchVocabulary().then(words => renderRevisionWordList(words));
 }
 
@@ -750,6 +816,10 @@ function nextQuestion() {
 
 function finishTest() {
   const area = document.getElementById('revisionArea');
+
+  // Test complete: clear persisted selection so next visit starts fresh
+  sessionStorage.removeItem(REV_SS_IDS);
+  sessionStorage.removeItem(REV_SS_DATA);
 
   // If there are wrong answers to retry, cycle them back in
   if (retryQueue.length > 0) {

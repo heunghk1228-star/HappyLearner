@@ -463,11 +463,31 @@ async function openFlashcards() {
   // Load tag filter
   loadFlashcardTagFilter();
 
-  // Reset tier filter buttons
-  activeTiers = ['newbee', 'well-tested', 'mastered'];
+  // Reset tier filter buttons — use restored state if available
+  if (sessionStorage.getItem(FC_SS_TIERS) === null) {
+    activeTiers = ['newbee', 'well-tested', 'mastered'];
+  }
+
+  // Apply restored tag filter if any
+  const tagSel = document.getElementById('flashcardTagFilter');
+  if (tagSel && _fc_restoredTag) {
+    tagSel.value = _fc_restoredTag;
+  }
 
   currentFlashcards = words;
   renderFlashcards(words);
+
+  // Re-apply tier button active states and filter after grid renders
+  setTimeout(() => {
+    syncTierButtons();
+    const tag = document.getElementById('flashcardTagFilter')?.value || '';
+    if (tag || (sessionStorage.getItem(FC_SS_TIERS) !== null)) {
+      filterFlashcards();
+    }
+    // Clear restored tag so it's not reused on the next manual open
+    _fc_restoredTag = '';
+  }, 0);
+
   hideLoading();
 }
 
@@ -512,7 +532,28 @@ function speakSentence(wordId) {
   speakWord(word.sample_sentence, getFastRate());
 }
 
-let activeTiers = ['newbee', 'well-tested', 'mastered'];
+// sessionStorage keys for filter persistence (survives BFCache / tab switch)
+const FC_SS_TIERS  = 'fc_activeTiers';
+const FC_SS_TAG    = 'fc_tagFilter';
+
+// Restore filter state from sessionStorage (called before openFlashcards re-inits)
+function restoreFlashcardState() {
+  const saved = sessionStorage.getItem(FC_SS_TIERS);
+  if (saved) {
+    try { activeTiers = JSON.parse(saved); } catch (_) {}
+  }
+  const savedTag = sessionStorage.getItem(FC_SS_TAG);
+  if (savedTag !== null) _fc_restoredTag = savedTag;
+}
+let _fc_restoredTag = '';
+
+function syncTierButtons() {
+  ['newbee', 'well-tested', 'mastered'].forEach(tier => {
+    const btn = document.querySelector(`.tier-btn[data-tier="${tier}"]`);
+    if (!btn) return;
+    btn.classList.toggle('active', activeTiers.includes(tier));
+  });
+}
 
 function toggleTierFilter(tier) {
   const idx = activeTiers.indexOf(tier);
@@ -523,11 +564,14 @@ function toggleTierFilter(tier) {
     activeTiers.push(tier);
     document.querySelector(`.tier-btn[data-tier="${tier}"]`).classList.add('active');
   }
+  sessionStorage.setItem(FC_SS_TIERS, JSON.stringify(activeTiers));
   filterFlashcards();
 }
 
 function filterFlashcards() {
-  const tagFilter = document.getElementById('flashcardTagFilter').value;
+  const tagFilterEl = document.getElementById('flashcardTagFilter');
+  const tagFilter = tagFilterEl ? tagFilterEl.value : '';
+  if (tagFilterEl) sessionStorage.setItem(FC_SS_TAG, tagFilter);
 
   // Fetch all words first
     fetchVocabulary().then(async (allWords) => {

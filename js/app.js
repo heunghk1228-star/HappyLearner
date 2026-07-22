@@ -53,9 +53,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Sync lastKnownHash when tab becomes visible (prevents spurious hashchange/popstate
   // that some browsers fire on BFCache restore or tab switch)
+  // Also re-restore sub-page state after BFCache resumes (JS variables are reset)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       lastKnownHash = window.location.hash;
+      // BFCache restore: JS variables are reset but DOM is intact.
+      // Re-open sub-page so it re-initialises its own state from sessionStorage.
+      const page = getCurrentPageFromHash();
+      const sub  = getCurrentSubPageFromHash();
+      if (page === 'english' && sub) {
+        setTimeout(() => restoreEnglishSubPage(sub), 0);
+      }
     }
   });
   
@@ -266,6 +274,29 @@ function renderComingSoonPage(container, subject) {
       <p>${t(`${subject}.comingSoon`)}</p>
     </div>
   `;
+}
+
+// ============================================================
+// Sub-page Restoration (after BFCache / visibility resume)
+// ============================================================
+
+async function restoreEnglishSubPage(sub) {
+  if (!currentUser) return;
+  switch (sub) {
+    case 'flashcards':
+      // Restore filter state from sessionStorage before opening
+      restoreFlashcardState();
+      await openFlashcards();
+      break;
+    case 'vocab':
+      restoreVocabState();
+      await openVocabularyBook();
+      break;
+    case 'revision':
+      restoreRevisionState();
+      showRevisionPage();
+      break;
+  }
 }
 
 // ============================================================
